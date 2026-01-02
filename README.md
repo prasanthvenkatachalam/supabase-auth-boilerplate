@@ -45,8 +45,8 @@ Follow these steps to set up the project locally.
 1.  **Clone the repository:**
 
     ```bash
-    git clone https://github.com/your-username/supbase-auth-boilerplate.git
-    cd supbase-auth-boilerplate
+    git clone https://github.com/your-username/supabase-auth-boilerplate.git
+    cd supabase-auth-boilerplate
     ```
 
 2.  **Install dependencies:**
