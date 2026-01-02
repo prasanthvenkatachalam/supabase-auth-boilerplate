@@ -88,16 +88,16 @@ Follow these steps to set up the project locally.
 
 ## 📂 Project Structure
 
-```bash
 src/
 ├── app/              # Next.js App Router pages and layouts
 ├── components/       # Reusable UI components
 ├── constants/        # Global constants
 ├── hooks/            # Custom React hooks
-├── lib/              # Utility libraries and configurations (e.g., Supabase client)
+├── lib/              # Utility libraries and configurations
 ├── loc/              # Localization/i18n files
 ├── services/         # API services and data fetching logic
 ├── styles/           # Global styles
+├── utils/            # Helper functions (e.g., Supabase client)
 └── middleware.ts     # Next.js middleware (Auth protection)
 ```
 
