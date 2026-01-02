@@ -88,6 +88,7 @@ Follow these steps to set up the project locally.
 
 ## 📂 Project Structure
 
+```bash
 src/
 ├── app/              # Next.js App Router pages and layouts
 ├── components/       # Reusable UI components
