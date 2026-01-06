@@ -5,15 +5,16 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link } from "@/i18n/routing";
 import { useState } from "react";
-
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { useSignUp } from "@/hooks/api/use-auth";
 import { signUpSchema, type SignUpInput } from "@/lib/validations/auth";
 import { ROUTES } from "@/constants";
+import { CheckIcon } from "@/components/icons";
 
 export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutRef<"div">) {
   const t = useTranslations("auth");
@@ -95,9 +96,8 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="password">{t("password")}</Label>
-                    <Input
+                    <PasswordInput
                       id="password"
-                      type="password"
                       {...register("password")}
                       className={cn(errors.password && "border-destructive")}
                     />

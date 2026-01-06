@@ -13,8 +13,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html>
-      <body className={`${dmSans.variable} font-sans antialiased`}>{children}</body>
+    <html suppressHydrationWarning>
+      <body className={`${dmSans.variable} font-sans antialiased`} suppressHydrationWarning>
+        {children}
+      </body>
     </html>
   );
 }

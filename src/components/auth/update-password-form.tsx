@@ -9,7 +9,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { useUpdatePassword } from "@/hooks/api/use-auth";
 import { updatePasswordSchema, type UpdatePasswordInput } from "@/lib/validations/auth";
@@ -58,9 +58,8 @@ export function UpdatePasswordForm({ className, ...props }: React.ComponentProps
             <div className="space-y-4">
               <div className="grid gap-2">
                 <Label htmlFor="password">{t("password")}</Label>
-                <Input
+                <PasswordInput
                   id="password"
-                  type="password"
                   {...register("password")}
                   className={cn(errors.password && "border-destructive")}
                 />
@@ -70,9 +69,8 @@ export function UpdatePasswordForm({ className, ...props }: React.ComponentProps
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="confirmPassword">{t("confirm_password")}</Label>
-                <Input
+                <PasswordInput
                   id="confirmPassword"
-                  type="password"
                   {...register("confirmPassword")}
                   className={cn(errors.confirmPassword && "border-destructive")}
                 />
