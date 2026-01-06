@@ -1,8 +1,38 @@
 {
   "auth": {
     "login": "Login",
+    "login_desc": "Enter your email below to login to your account",
     "signup": "Sign Up",
+    "signup_desc": "Create an account to get started",
     "email": "Email",
-    "password": "Password"
+    "password": "Password",
+    "confirm_password": "Confirm Password",
+    "forgot_password": "Forgot Password?",
+    "forgot_password_Title": "Forgot Password",
+    "forgot_password_desc": "Enter your email to receive reset instructions",
+    "update_password": "Update Password",
+    "update_password_desc": "Enter your new password below",
+    "submit_login": "Sign In",
+    "submit_signup": "Create Account",
+    "submit_reset": "Send Instructions",
+    "submit_update": "Update Password",
+    "no_account": "Don't have an account?",
+    "has_account": "Already have an account?",
+    "check_email": "Check your email",
+    "reset_sent": "Password reset instructions have been sent to your email.",
+    "back_to_login": "Back to Login",
+    "loading": "Loading...",
+    "logout": "Logout",
+    "hello": "Hello",
+    "signup_success_title": "Thank you for signing up!",
+    "signup_success_desc": "Check your email to confirm",
+    "signup_success_message": "You've successfully signed up. Please check your email to confirm your account before signing in.",
+    "errors": {
+      "invalid_email": "Invalid email address",
+      "password_min": "Password must be at least 8 characters",
+      "password_pattern": "Password requirement not met",
+      "password_mismatch": "Passwords do not match",
+      "default": "An error occurred. Please try again."
+    }
   }
 }
