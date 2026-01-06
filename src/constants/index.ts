@@ -10,4 +10,4 @@ export const QUERY_CONFIG = {
   STALE_TIME: 60 * 1000, // 1 minute
 };
 
-export { ROUTES } from "./routes";
+export { ROUTES } from "@/constants/routes";
