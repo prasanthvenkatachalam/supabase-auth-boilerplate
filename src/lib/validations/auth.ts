@@ -24,6 +24,7 @@ export const signUpSchema = z.object({
 
 export const forgotPasswordSchema = z.object({
   email: z.email("Invalid email address").trim().toLowerCase(),
+  captchaToken: z.string().min(1, "Please complete the captcha"),
 });
 
 export const updatePasswordSchema = z.object({

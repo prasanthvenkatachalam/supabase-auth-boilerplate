@@ -20,4 +20,7 @@ export const SUCCESS_MESSAGES = {
   SIGNUP: {
     CREATED: "Account created successfully. Please check your email to verify your account.",
   },
+  FORGOT_PASSWORD: {
+    EMAIL_SENT: "If an account exists with this email, you will receive a password reset link.",
+  },
 } as const;

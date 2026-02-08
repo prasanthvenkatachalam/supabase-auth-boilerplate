@@ -392,3 +392,109 @@ export async function checkResendVerificationRateLimit(
     return { allowed: true };
   }
 }
+
+/**
+ * Forgot password rate limiters
+ * Uses the same limits as signup to prevent abuse
+ */
+export const ipForgotPasswordRateLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(
+    RATE_LIMIT_CONFIG.FORGOT_PASSWORD.IP.LIMIT,
+    RATE_LIMIT_CONFIG.FORGOT_PASSWORD.IP.WINDOW as Duration
+  ),
+  analytics: false,
+  prefix: RATE_LIMIT_CONFIG.FORGOT_PASSWORD.IP.PREFIX,
+  ephemeralCache: new Map(),
+});
+
+export const emailForgotPasswordRateLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(
+    RATE_LIMIT_CONFIG.FORGOT_PASSWORD.EMAIL.LIMIT,
+    RATE_LIMIT_CONFIG.FORGOT_PASSWORD.EMAIL.WINDOW as Duration
+  ),
+  analytics: false,
+  prefix: RATE_LIMIT_CONFIG.FORGOT_PASSWORD.EMAIL.PREFIX,
+  ephemeralCache: new Map(),
+});
+
+export const globalForgotPasswordRateLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(
+    RATE_LIMIT_CONFIG.FORGOT_PASSWORD.GLOBAL.LIMIT,
+    RATE_LIMIT_CONFIG.FORGOT_PASSWORD.GLOBAL.WINDOW as Duration
+  ),
+  analytics: false,
+  prefix: RATE_LIMIT_CONFIG.FORGOT_PASSWORD.GLOBAL.PREFIX,
+  ephemeralCache: new Map(),
+});
+
+/**
+ * Check rate limits for forgot password
+ * 
+ * @param ip - Client IP
+ * @param email - User email
+ */
+export async function checkForgotPasswordRateLimit(
+  ip: string,
+  email: string
+): Promise<{
+  allowed: boolean;
+  limitType?: "global" | "ip" | "email";
+  limit?: number;
+  remaining?: number;
+  resetAt?: Date;
+}> {
+  try {
+    const [globalResult, ipResult, emailResult] = await Promise.all([
+      globalForgotPasswordRateLimiter.limit("global"),
+      ipForgotPasswordRateLimiter.limit(ip),
+      emailForgotPasswordRateLimiter.limit(email.toLowerCase()),
+    ]);
+
+    if (!globalResult.success) {
+      return {
+        allowed: false,
+        limitType: "global",
+        limit: globalResult.limit,
+        remaining: globalResult.remaining,
+        resetAt: new Date(globalResult.reset),
+      };
+    }
+
+    if (!ipResult.success) {
+      return {
+        allowed: false,
+        limitType: "ip",
+        limit: ipResult.limit,
+        remaining: ipResult.remaining,
+        resetAt: new Date(ipResult.reset),
+      };
+    }
+
+    if (!emailResult.success) {
+      return {
+        allowed: false,
+        limitType: "email",
+        limit: emailResult.limit,
+        remaining: emailResult.remaining,
+        resetAt: new Date(emailResult.reset),
+      };
+    }
+
+    return {
+      allowed: true,
+      remaining: Math.min(
+        globalResult.remaining,
+        ipResult.remaining,
+        emailResult.remaining
+      ),
+      limit: emailResult.limit,
+      resetAt: new Date(emailResult.reset),
+    };
+  } catch (error) {
+    console.error("Forgot password rate limit check failed:", error);
+    return { allowed: true };
+  }
+}
