@@ -20,6 +20,7 @@ import { checkForgotPasswordRateLimit } from "@/lib/rate-limit";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/constants/messages";
 import { RATE_LIMIT_CONFIG } from "@/constants/rate-limit";
 import { sendEmail } from "@/lib/mail";
+import { validateTurnstileToken } from "@/lib/turnstile";
 import { supabaseAdmin } from "@/utils/supabase/admin";
 
 export const runtime = 'nodejs';
@@ -119,6 +120,25 @@ export async function POST(request: NextRequest) {
             "X-RateLimit-Reset": resetDate?.getTime().toString() || "",
           },
         }
+      );
+    }
+
+    // Step 5: Validate Turnstile Token
+    // Check captcha after rate limit to protect the verification API, 
+    // but before expensive operations (though rate limit check is cheap).
+    // Actually, validating captcha first acts as a better filter against bots?
+    // But then we hit Cloudflare API on every request. 
+    // Let's stick to Rate Limit -> Captcha -> Logic.
+    const { captchaToken } = validationResult.data;
+    const captchaValidation = await validateTurnstileToken(captchaToken, clientIp);
+
+    if (!captchaValidation.success) {
+      return NextResponse.json(
+        {
+          error: "Captcha Validation Failed",
+          message: captchaValidation.error || "Please complete the captcha correctly.",
+        },
+        { status: 400 }
       );
     }
 

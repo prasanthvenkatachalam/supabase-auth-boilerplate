@@ -95,14 +95,14 @@ export const signUpWithEmail = async (credentials: SignUpInput) => {
  * 4. Custom email templates via Zepto Mail
  */
 export const resetPasswordForEmail = async (input: ForgotPasswordInput, redirectTo?: string) => {
-  const { email } = forgotPasswordSchema.parse(input);
+  const { email, captchaToken } = forgotPasswordSchema.parse(input);
 
   const response = await fetch("/api/auth/forgot-password", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ email, redirectTo }),
+    body: JSON.stringify({ email, captchaToken, redirectTo }),
   });
 
   const data = await response.json();

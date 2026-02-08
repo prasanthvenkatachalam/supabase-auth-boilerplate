@@ -32,8 +32,8 @@ export const useSignUp = () => {
 
 export const useResetPassword = () => {
   return useMutation({
-    mutationFn: ({ email, redirectTo }: { email: string; redirectTo?: string }) => 
-      resetPasswordForEmail({ email }, redirectTo),
+    mutationFn: ({ email, captchaToken, redirectTo }: { email: string; captchaToken: string; redirectTo?: string }) => 
+      resetPasswordForEmail({ email, captchaToken }, redirectTo),
   });
 };
 
