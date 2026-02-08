@@ -50,4 +50,21 @@ export const RATE_LIMIT_CONFIG = {
       PREFIX: "ratelimit:resend-verification:global:",
     },
   },
+  FORGOT_PASSWORD: {
+    IP: {
+      LIMIT: 3,
+      WINDOW: "15 m",
+      PREFIX: "ratelimit:forgot-password:ip:",
+    },
+    EMAIL: {
+      LIMIT: 5,
+      WINDOW: "1 h",
+      PREFIX: "ratelimit:forgot-password:email:",
+    },
+    GLOBAL: {
+      LIMIT: 100,
+      WINDOW: "1 m",
+      PREFIX: "ratelimit:forgot-password:global:",
+    },
+  },
 } as const;

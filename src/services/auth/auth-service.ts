@@ -84,15 +84,48 @@ export const signUpWithEmail = async (credentials: SignUpInput) => {
   return data;
 };
 
+/**
+ * Reset password for email using rate-limited API endpoint
+ * 
+ * This now calls our custom API route instead of directly calling Supabase.
+ * Benefits:
+ * 1. Rate limiting is enforced server-side
+ * 2. IP tracking for abuse prevention
+ * 3. Better error handling
+ * 4. Custom email templates via Zepto Mail
+ */
 export const resetPasswordForEmail = async (input: ForgotPasswordInput, redirectTo?: string) => {
-  const supabase = createClient();
   const { email } = forgotPasswordSchema.parse(input);
 
-  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo,
+  const response = await fetch("/api/auth/forgot-password", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email, redirectTo }),
   });
 
-  if (error) throw error;
+  const data = await response.json();
+
+  if (!response.ok) {
+    // Rate limit error (429)
+    if (response.status === 429) {
+      const retryAfter = data.retryAfter || 900;
+      const minutes = Math.ceil(retryAfter / 60);
+      throw new Error(
+        data.message || `Too many attempts. Please try again in ${minutes} minutes.`
+      );
+    }
+
+    // Validation error (400)
+    if (response.status === 400) {
+      throw new Error(data.message || "Invalid email address.");
+    }
+
+    // Generic error
+    throw new Error(data.message || "Failed to send reset email. Please try again.");
+  }
+
   return data;
 };
 
