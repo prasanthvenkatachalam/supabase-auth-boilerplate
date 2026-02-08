@@ -16,6 +16,7 @@ A modern, production-ready boilerplate built with **Next.js 16 (App Router)** an
 - **Email Verification Flow**: Dedicated verify-email page with magic-link handling, resend verification, and rate-limited resend (IP, email, global).
 - **Cloudflare Turnstile**: Bot protection using the latest non-interactive captcha.
 - **ZeptoMail**: Reliable transactional email delivery service.
+- **Forgot Password Flow**: Secure password recovery with rate limiting (IP, Email, Global) and Cloudflare Turnstile protection.
 - **Global Auth Sync**: Real-time session synchronization across multiple browser tabs.
 - **TypeScript**: Fully typed codebase for better developer experience and code quality.
 - **Tailwind CSS 4**: The latest utility-first CSS framework for rapid and responsive UI development.
@@ -85,7 +86,7 @@ Follow these steps to set up the project locally.
 
     # Cloudflare Turnstile
     NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY=your_site_key
-    TURNSTILE_SECRET_KEY=your_secret_key
+    CLOUDFLARE_TURNSTILE_SECRET_KEY=your_secret_key
 
     # ZeptoMail (for emails)
     ZEPTOMAIL_URL=api.zeptomail.in/
