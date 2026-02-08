@@ -12,7 +12,8 @@ A modern, production-ready boilerplate built with **Next.js 16 (App Router)** an
 
 - **Next.js 16 (App Router)**: Utilizing the latest React Server Components and routing capabilities with the new `proxy.ts` convention.
 - **Supabase Authentication**: Secure and scalable user authentication and database.
-- **Upstash Rate Limiting**: Multi-layer protection (IP, Email, and Global) using Upstash Redis.
+- **Upstash Rate Limiting**: Multi-layer protection (IP, Email, and Global) using Upstash Redis for signup, login, and resend verification.
+- **Email Verification Flow**: Dedicated verify-email page with magic-link handling, resend verification, and rate-limited resend (IP, email, global).
 - **Cloudflare Turnstile**: Bot protection using the latest non-interactive captcha.
 - **ZeptoMail**: Reliable transactional email delivery service.
 - **Global Auth Sync**: Real-time session synchronization across multiple browser tabs.
@@ -115,6 +116,7 @@ Follow these steps to set up the project locally.
 ```bash
 src/
 ├── app/              # Next.js App Router pages and layouts
+│   └── [locale]/auth/  # Auth pages (login, signup, verify-email, confirm)
 ├── components/       # Reusable UI components
 ├── constants/        # Global constants
 ├── hooks/            # Custom React hooks
