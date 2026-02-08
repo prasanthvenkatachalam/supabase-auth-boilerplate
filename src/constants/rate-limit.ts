@@ -33,4 +33,21 @@ export const RATE_LIMIT_CONFIG = {
       PREFIX: "ratelimit:login:global:",
     },
   },
+  RESEND_VERIFICATION: {
+    IP: {
+      LIMIT: 10,
+      WINDOW: "1 h",
+      PREFIX: "ratelimit:resend-verification:ip:",
+    },
+    EMAIL: {
+      LIMIT: 3,
+      WINDOW: "1 h",
+      PREFIX: "ratelimit:resend-verification:email:",
+    },
+    GLOBAL: {
+      LIMIT: 100,
+      WINDOW: "1 h",
+      PREFIX: "ratelimit:resend-verification:global:",
+    },
+  },
 } as const;

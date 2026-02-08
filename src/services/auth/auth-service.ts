@@ -114,3 +114,47 @@ export const signOut = async () => {
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
 };
+
+/**
+ * Resend verification email
+ * 
+ * Calls the API route to resend verification email with rate limiting.
+ */
+export const resendVerificationEmail = async (email: string) => {
+  const response = await fetch("/api/auth/resend-verification", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email }),
+  });
+
+  const data = await response.json();
+
+  // Handle different error scenarios
+  if (!response.ok) {
+    // Rate limit error (429)
+    if (response.status === 429) {
+      const retryAfter = data.retryAfter || 3600;
+      const minutes = Math.ceil(retryAfter / 60);
+      throw new Error(
+        data.message || `Too many resend requests. Please try again in ${minutes} minutes.`
+      );
+    }
+
+    // Email already verified (409)
+    if (response.status === 409) {
+      throw new Error(data.message || "This email is already verified.");
+    }
+
+    // Validation error (400)
+    if (response.status === 400) {
+      throw new Error(data.message || "Invalid email address.");
+    }
+
+    // Generic error
+    throw new Error(data.message || "Failed to resend verification email. Please try again.");
+  }
+
+  return data;
+};

@@ -4,7 +4,8 @@ import {
   signUpWithEmail, 
   resetPasswordForEmail,
   updatePassword,
-  signOut
+  signOut,
+  resendVerificationEmail
 } from "@/services/auth/auth-service";
 import type { 
   LoginInput, 
@@ -49,5 +50,11 @@ export const useSignOut = () => {
     onSuccess: () => {
       queryClient.clear();
     },
+  });
+};
+
+export const useResendVerification = () => {
+  return useMutation({
+    mutationFn: (email: string) => resendVerificationEmail(email),
   });
 };

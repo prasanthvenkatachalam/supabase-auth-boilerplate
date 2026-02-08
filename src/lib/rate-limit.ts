@@ -286,3 +286,109 @@ export async function checkLoginRateLimit(
     return { allowed: true };
   }
 }
+
+/**
+ * Resend verification email rate limiters
+ * Prevents abuse of resend functionality
+ */
+export const ipResendVerificationRateLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(
+    RATE_LIMIT_CONFIG.RESEND_VERIFICATION.IP.LIMIT,
+    RATE_LIMIT_CONFIG.RESEND_VERIFICATION.IP.WINDOW as Duration
+  ),
+  analytics: false,
+  prefix: RATE_LIMIT_CONFIG.RESEND_VERIFICATION.IP.PREFIX,
+  ephemeralCache: new Map(),
+});
+
+export const emailResendVerificationRateLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(
+    RATE_LIMIT_CONFIG.RESEND_VERIFICATION.EMAIL.LIMIT,
+    RATE_LIMIT_CONFIG.RESEND_VERIFICATION.EMAIL.WINDOW as Duration
+  ),
+  analytics: false,
+  prefix: RATE_LIMIT_CONFIG.RESEND_VERIFICATION.EMAIL.PREFIX,
+  ephemeralCache: new Map(),
+});
+
+export const globalResendVerificationRateLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(
+    RATE_LIMIT_CONFIG.RESEND_VERIFICATION.GLOBAL.LIMIT,
+    RATE_LIMIT_CONFIG.RESEND_VERIFICATION.GLOBAL.WINDOW as Duration
+  ),
+  analytics: false,
+  prefix: RATE_LIMIT_CONFIG.RESEND_VERIFICATION.GLOBAL.PREFIX,
+  ephemeralCache: new Map(),
+});
+
+/**
+ * Check rate limits for resend verification email
+ * 
+ * @param ip - Client IP
+ * @param email - User email
+ */
+export async function checkResendVerificationRateLimit(
+  ip: string,
+  email: string
+): Promise<{
+  allowed: boolean;
+  limitType?: "global" | "ip" | "email";
+  limit?: number;
+  remaining?: number;
+  resetAt?: Date;
+}> {
+  try {
+    const [globalResult, ipResult, emailResult] = await Promise.all([
+      globalResendVerificationRateLimiter.limit("global"),
+      ipResendVerificationRateLimiter.limit(ip),
+      emailResendVerificationRateLimiter.limit(email.toLowerCase()),
+    ]);
+
+    if (!globalResult.success) {
+      return {
+        allowed: false,
+        limitType: "global",
+        limit: globalResult.limit,
+        remaining: globalResult.remaining,
+        resetAt: new Date(globalResult.reset),
+      };
+    }
+
+    if (!ipResult.success) {
+      return {
+        allowed: false,
+        limitType: "ip",
+        limit: ipResult.limit,
+        remaining: ipResult.remaining,
+        resetAt: new Date(ipResult.reset),
+      };
+    }
+
+    if (!emailResult.success) {
+      return {
+        allowed: false,
+        limitType: "email",
+        limit: emailResult.limit,
+        remaining: emailResult.remaining,
+        resetAt: new Date(emailResult.reset),
+      };
+    }
+
+    return {
+      allowed: true,
+      remaining: Math.min(
+        globalResult.remaining,
+        ipResult.remaining,
+        emailResult.remaining
+      ),
+      limit: emailResult.limit,
+      resetAt: new Date(emailResult.reset),
+    };
+  } catch (error) {
+    console.error("Resend verification rate limit check failed:", error);
+    return { allowed: true };
+  }
+}
