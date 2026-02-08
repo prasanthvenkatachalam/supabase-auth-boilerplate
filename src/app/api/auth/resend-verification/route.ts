@@ -11,6 +11,7 @@ import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/constants/messages";
 import { RATE_LIMIT_CONFIG } from "@/constants/rate-limit";
 import { sendEmail } from "@/lib/mail";
 import { supabaseAdmin } from "@/utils/supabase/admin";
+import type { User } from "@supabase/supabase-js";
 import { z } from "zod";
 
 export const runtime = 'nodejs';
@@ -38,6 +39,34 @@ function getClientIp(request: NextRequest): string {
   }
 
   return "127.0.0.1";
+}
+
+/**
+ * Find a user by email using listUsers (Admin API has no getUserByEmail).
+ * Paginates until the user is found or no more pages.
+ */
+async function findUserByEmail(email: string): Promise<{
+  data: { user: User | null };
+  error: Error | null;
+}> {
+  const normalizedEmail = email.toLowerCase().trim();
+  let page = 1;
+  const perPage = 1000;
+
+  while (true) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({
+      page,
+      perPage,
+    });
+    if (error) return { data: { user: null }, error };
+    const user = data.users.find(
+      (u) => u.email?.toLowerCase().trim() === normalizedEmail
+    );
+    if (user) return { data: { user }, error: null };
+    if (data.users.length < perPage) break;
+    page += 1;
+  }
+  return { data: { user: null }, error: null };
 }
 
 /**
@@ -121,7 +150,7 @@ export async function POST(request: NextRequest) {
 
     // Step 4: Check if user exists and get user status
     const { data: userData, error: userError } =
-      await supabaseAdmin.auth.admin.getUserByEmail(email);
+      await findUserByEmail(email);
 
     if (userError || !userData?.user) {
       // Don't reveal if email exists or not (security best practice)
@@ -154,7 +183,7 @@ export async function POST(request: NextRequest) {
     // configured in the project settings, which should point to /auth/confirm
     const { data: adminData, error: adminError } =
       await supabaseAdmin.auth.admin.generateLink({
-        type: "signup",
+        type: "magiclink",
         email,
       });
 
