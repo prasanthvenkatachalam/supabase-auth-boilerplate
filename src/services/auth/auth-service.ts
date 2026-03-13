@@ -130,15 +130,30 @@ export const resetPasswordForEmail = async (input: ForgotPasswordInput, redirect
 };
 
 export const updatePassword = async (input: UpdatePasswordInput) => {
-  const supabase = createClient();
-  // We only send the password to supabase, confirmPassword was for UI validation
-  const { password } = input; 
+  const { password, captchaToken } = input;
 
-  const { data, error } = await supabase.auth.updateUser({
-    password,
+  const response = await fetch("/api/auth/update-password", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ password, captchaToken, confirmPassword: password }),
   });
 
-  if (error) throw error;
+  const data = await response.json();
+
+  if (!response.ok) {
+    if (response.status === 429) {
+      const retryAfter = data.retryAfter || 900;
+      const minutes = Math.ceil(retryAfter / 60);
+      throw new Error(
+        data.message || `Too many attempts. Please try again in ${minutes} minutes.`
+      );
+    }
+
+    throw new Error(data.message || "Failed to update password. Please try again.");
+  }
+
   return data;
 };
 

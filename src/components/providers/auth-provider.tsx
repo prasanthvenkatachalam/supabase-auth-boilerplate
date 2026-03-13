@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useRef } from 'react';
-import { useRouter } from '@/i18n/routing';
+import { useRouter, usePathname } from '@/i18n/routing';
 import { createClient } from '@/utils/supabase/client';
 import { ROUTES } from '@/constants';
 import { toast } from 'sonner';
@@ -10,6 +10,7 @@ const AuthContext = createContext({});
 
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const supabase = createClient();
   const hasShownVerificationToast = useRef(false);
   const previousEmailConfirmedAt = useRef<string | null>(null);
@@ -22,7 +23,17 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
           // Reset state on sign out
           hasShownVerificationToast.current = false;
           previousEmailConfirmedAt.current = null;
-          router.replace(ROUTES.AUTH.LOGIN);
+          
+          // Only redirect to login if we're not already on a public auth page
+          // This prevents infinite redirects or interrupting password reset flow
+          // The usePathname hook removes the locale prefix, so we check against pure paths
+          const isPublicAuthPage = Object.values(ROUTES.AUTH).some(route => 
+            pathname.startsWith(route)
+          );
+          
+          if (!isPublicAuthPage) {
+            router.replace(ROUTES.AUTH.LOGIN);
+          }
         } 
         
         // Handle email verification - this fires when user clicks verification link
@@ -58,7 +69,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     return () => {
       subscription.unsubscribe();
     };
-  }, [supabase, router]);
+  }, [supabase, router, pathname]);
 
   return <AuthContext.Provider value={{}}>{children}</AuthContext.Provider>;
 }

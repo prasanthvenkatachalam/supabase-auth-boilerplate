@@ -6,6 +6,7 @@ export const ROUTES = {
     FORGOT_PASSWORD: "/auth/forgot-password",
     ERROR: "/auth/error",
     VERIFY_EMAIL: "/auth/verify-email",
+    UPDATE_PASSWORD: "/auth/update-password",
   },
   PROTECTED: "/protected",
 } as const;

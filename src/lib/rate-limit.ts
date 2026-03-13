@@ -498,3 +498,109 @@ export async function checkForgotPasswordRateLimit(
     return { allowed: true };
   }
 }
+
+/**
+ * Update password rate limiters
+ * Uses the same limits as signup to prevent abuse
+ */
+export const ipUpdatePasswordRateLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(
+    RATE_LIMIT_CONFIG.UPDATE_PASSWORD.IP.LIMIT,
+    RATE_LIMIT_CONFIG.UPDATE_PASSWORD.IP.WINDOW as Duration
+  ),
+  analytics: false,
+  prefix: RATE_LIMIT_CONFIG.UPDATE_PASSWORD.IP.PREFIX,
+  ephemeralCache: new Map(),
+});
+
+export const emailUpdatePasswordRateLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(
+    RATE_LIMIT_CONFIG.UPDATE_PASSWORD.EMAIL.LIMIT,
+    RATE_LIMIT_CONFIG.UPDATE_PASSWORD.EMAIL.WINDOW as Duration
+  ),
+  analytics: false,
+  prefix: RATE_LIMIT_CONFIG.UPDATE_PASSWORD.EMAIL.PREFIX,
+  ephemeralCache: new Map(),
+});
+
+export const globalUpdatePasswordRateLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(
+    RATE_LIMIT_CONFIG.UPDATE_PASSWORD.GLOBAL.LIMIT,
+    RATE_LIMIT_CONFIG.UPDATE_PASSWORD.GLOBAL.WINDOW as Duration
+  ),
+  analytics: false,
+  prefix: RATE_LIMIT_CONFIG.UPDATE_PASSWORD.GLOBAL.PREFIX,
+  ephemeralCache: new Map(),
+});
+
+/**
+ * Check rate limits for update password
+ * 
+ * @param ip - Client IP
+ * @param email - User email
+ */
+export async function checkUpdatePasswordRateLimit(
+  ip: string,
+  email: string
+): Promise<{
+  allowed: boolean;
+  limitType?: "global" | "ip" | "email";
+  limit?: number;
+  remaining?: number;
+  resetAt?: Date;
+}> {
+  try {
+    const [globalResult, ipResult, emailResult] = await Promise.all([
+      globalUpdatePasswordRateLimiter.limit("global"),
+      ipUpdatePasswordRateLimiter.limit(ip),
+      emailUpdatePasswordRateLimiter.limit(email.toLowerCase()),
+    ]);
+
+    if (!globalResult.success) {
+      return {
+        allowed: false,
+        limitType: "global",
+        limit: globalResult.limit,
+        remaining: globalResult.remaining,
+        resetAt: new Date(globalResult.reset),
+      };
+    }
+
+    if (!ipResult.success) {
+      return {
+        allowed: false,
+        limitType: "ip",
+        limit: ipResult.limit,
+        remaining: ipResult.remaining,
+        resetAt: new Date(ipResult.reset),
+      };
+    }
+
+    if (!emailResult.success) {
+      return {
+        allowed: false,
+        limitType: "email",
+        limit: emailResult.limit,
+        remaining: emailResult.remaining,
+        resetAt: new Date(emailResult.reset),
+      };
+    }
+
+    return {
+      allowed: true,
+      remaining: Math.min(
+        globalResult.remaining,
+        ipResult.remaining,
+        emailResult.remaining
+      ),
+      limit: emailResult.limit,
+      resetAt: new Date(emailResult.reset),
+    };
+  } catch (error) {
+    console.error("Update password rate limit check failed:", error);
+    return { allowed: true };
+  }
+}

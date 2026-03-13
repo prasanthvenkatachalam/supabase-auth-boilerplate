@@ -1,9 +1,9 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Link, usePathname } from "@/i18n/routing";
+import { Link } from "@/i18n/routing";
 import { useState, useRef } from "react";
 
 import { cn } from "@/lib/utils";
@@ -19,7 +19,7 @@ import type { TurnstileInstance } from "@marsidev/react-turnstile";
 
 export function ForgotPasswordForm({ className, ...props }: React.ComponentPropsWithoutRef<"div">) {
   const t = useTranslations("auth");
-  const pathname = usePathname();
+  const locale = useLocale();
   const [serverError, setServerError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [isCaptchaLoading, setIsCaptchaLoading] = useState(true);
@@ -43,7 +43,6 @@ export function ForgotPasswordForm({ className, ...props }: React.ComponentProps
   const onSubmit = (data: ForgotPasswordInput) => {
     setServerError(null);
     // Construct redirect URL with locale
-    const locale = pathname.split("/")[1] || "en";
     const redirectTo = `${window.location.origin}/${locale}/auth/update-password`;
 
     resetPassword(
