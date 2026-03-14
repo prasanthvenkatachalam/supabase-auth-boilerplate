@@ -54,7 +54,7 @@ export function UpdatePasswordForm({
     setShowConfirmPassword(false);
 
     if (!code) {
-      setServerError("Invalid or missing reset token. Please request a new password reset.");
+      setServerError(t("errors.invalid_reset_token"));
       return;
     }
 

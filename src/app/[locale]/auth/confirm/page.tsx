@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { ROUTES } from "@/constants";
 import { routing } from "@/i18n/routing";
 
@@ -12,6 +13,7 @@ import { routing } from "@/i18n/routing";
  * restore the session, and redirect to reset-password or error.
  */
 export default function AuthConfirmPage() {
+  const t = useTranslations("auth");
   const router = useRouter();
   const params = useParams();
   const locale = (params?.locale as string) || routing.defaultLocale;
@@ -20,9 +22,12 @@ export default function AuthConfirmPage() {
     const searchParams = new URLSearchParams(window.location.search);
     const token_hash = searchParams.get("token_hash");
     const code = searchParams.get("code");
-    const type = searchParams.get("type");
     const next = searchParams.get("next") || `/${locale}`;
     const hasHash = typeof window !== "undefined" && window.location.hash?.length > 0;
+    const hashParams = hasHash
+      ? new URLSearchParams(window.location.hash.slice(1))
+      : null;
+    const type = searchParams.get("type") || hashParams?.get("type") || null;
 
     const basePath = `/${locale}`;
     const resetPath = `${basePath}${ROUTES.AUTH.RESET_PASSWORD}`;
@@ -42,10 +47,7 @@ export default function AuthConfirmPage() {
 
     // 2. Recovery with hash: Supabase redirected with #access_token=... (server never sees hash).
     // Send tokens to API so the server can set session cookies; then reset-password API will see the user.
-    if (type === "recovery" && hasHash) {
-      const hashParams = new URLSearchParams(
-        window.location.hash.slice(1) // remove leading '#'
-      );
+    if (type === "recovery" && hasHash && hashParams) {
       const access_token = hashParams.get("access_token");
       const refresh_token = hashParams.get("refresh_token");
 
@@ -76,7 +78,7 @@ export default function AuthConfirmPage() {
 
   return (
     <div className="flex min-h-svh w-full items-center justify-center p-6">
-      <p className="text-muted-foreground">Confirming…</p>
+      <p className="text-muted-foreground">{t("confirming")}</p>
     </div>
   );
 }

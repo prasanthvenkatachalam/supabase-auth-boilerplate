@@ -144,8 +144,6 @@ export async function POST(request: NextRequest) {
     });
 
     if (updateError) {
-      console.error("Update password error:", updateError);
-
       let status = 500;
       let errorCode = "update_failed";
 
@@ -165,10 +163,28 @@ export async function POST(request: NextRequest) {
         errorCode = "validation_error";
       }
 
+      const safeMessageMap: Record<string, string> = {
+        weak_password: ERROR_MESSAGES.AUTH.WEAK_PASSWORD,
+        password_already_used:
+          "This password was used recently. Please choose a different one.",
+        validation_error:
+          "Invalid password. Please check the requirements and try again.",
+        update_failed: "Unable to update password. Please try again.",
+      };
+      const safeMessage =
+        safeMessageMap[errorCode] ?? "Unable to update password. Please try again.";
+
+      console.error(
+        "Update password error:",
+        updateError,
+        "errorCode:",
+        errorCode,
+      );
+
       return NextResponse.json(
         {
           error: "Update Failed",
-          message: updateError.message,
+          message: safeMessage,
           code: errorCode,
         },
         { status },

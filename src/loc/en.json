@@ -31,6 +31,7 @@
     "login_success": "Login successful",
     "logout_success": "Logged out successfully",
     "logout_error": "Failed to log out",
+    "confirming": "Confirming…",
     "verifying_email": "Please wait, verifying your email...",
     "verification_success": "Email verified successfully!",
     "verification_failed": "Email verification failed",
@@ -49,7 +50,8 @@
       "default": "An error occurred. Please try again.",
       "captcha_required": "Please complete the captcha",
       "captcha_failed": "Captcha verification failed. Please try again.",
-      "captcha_expired": "Captcha verification expired. Please try again."
+      "captcha_expired": "Captcha verification expired. Please try again.",
+      "invalid_reset_token": "Invalid or missing reset token. Please request a new password reset."
     }
   }
 }

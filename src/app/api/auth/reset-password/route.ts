@@ -32,8 +32,22 @@ function getClientIp(request: NextRequest): string {
 export async function POST(request: NextRequest) {
   try {
     const clientIp = getClientIp(request);
-    const body = await request.json();
-    
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch (parseError) {
+      if (parseError instanceof SyntaxError) {
+        return NextResponse.json(
+          {
+            error: "Bad Request",
+            message: "Invalid JSON in request body.",
+          },
+          { status: 400 },
+        );
+      }
+      throw parseError;
+    }
+
     const validationResult = updatePasswordSchema.safeParse(body);
 
     if (!validationResult.success) {

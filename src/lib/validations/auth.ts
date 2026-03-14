@@ -24,9 +24,23 @@ export const signUpSchema = z
     path: ["confirmPassword"],
   });
 
+const safeRedirectTo = z
+  .string()
+  .optional()
+  .transform((val) => (val?.trim() === "" ? undefined : val?.trim()))
+  .refine(
+    (val) =>
+      val === undefined ||
+      (val.startsWith("/") && !val.startsWith("//") && !val.includes("://")) ||
+      val.startsWith("http://") ||
+      val.startsWith("https://"),
+    { message: "redirectTo must be a relative path or https URL" },
+  );
+
 export const forgotPasswordSchema = z.object({
   email: z.email("Invalid email address").trim().toLowerCase(),
   captchaToken: z.string().min(1, "Please complete the captcha"),
+  redirectTo: safeRedirectTo,
 });
 
 export const updatePasswordSchema = z

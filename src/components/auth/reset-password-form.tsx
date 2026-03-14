@@ -135,7 +135,7 @@ export function ResetPasswordForm({
               onError={() => {
                 setServerError(t("errors.captcha_failed"));
                 setValue("captchaToken", "");
-                setIsCaptchaLoading(false);
+                setIsCaptchaLoading(true);
               }}
             />
             {errors.captchaToken && (

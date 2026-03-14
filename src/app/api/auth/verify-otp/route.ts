@@ -10,6 +10,19 @@ import { createClient } from "@/utils/supabase/server";
 import { type EmailOtpType } from "@supabase/supabase-js";
 import { routing } from "@/i18n/routing";
 
+const ALLOWED_EMAIL_OTP_TYPES: readonly EmailOtpType[] = [
+  "signup",
+  "recovery",
+  "magiclink",
+  "invite",
+  "email_change",
+  "email",
+] as const;
+
+function isEmailOtpType(value: string | null): value is EmailOtpType {
+  return value !== null && (ALLOWED_EMAIL_OTP_TYPES as readonly string[]).includes(value);
+}
+
 function getLocaleFromNext(next: string): string {
   const segments = next.split("/").filter(Boolean);
   if (segments.length > 0 && routing.locales.includes(segments[0] as "en")) {
@@ -22,7 +35,14 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const token_hash = searchParams.get("token_hash");
   const code = searchParams.get("code");
-  const type = searchParams.get("type") as EmailOtpType | null;
+  const typeRaw = searchParams.get("type");
+  if (typeRaw !== null && !isEmailOtpType(typeRaw)) {
+    return NextResponse.json(
+      { error: "Bad Request", message: "Invalid or unsupported type parameter." },
+      { status: 400 },
+    );
+  }
+  const type: EmailOtpType | null = typeRaw;
   const _next = searchParams.get("next");
   const next = _next?.startsWith("/") ? _next : `/${routing.defaultLocale}${ROUTES.HOME}`;
   const origin = request.nextUrl.origin;
@@ -36,7 +56,7 @@ export async function GET(request: NextRequest) {
       if (type === "recovery") {
         return NextResponse.redirect(`${origin}/${locale}${ROUTES.AUTH.RESET_PASSWORD}`);
       }
-      const target = next.startsWith("http") ? next : `${origin}${next}`;
+      const target = `${origin}${next}`;
       return NextResponse.redirect(target);
     }
   }

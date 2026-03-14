@@ -84,10 +84,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { email } = validationResult.data;
-    const redirectTo =
-      (body.redirectTo as string | undefined) ||
-      `${new URL(request.url).origin}/${routing.defaultLocale}${ROUTES.AUTH.CONFIRM}?type=recovery`;
+    const { email, redirectTo: redirectToRaw } = validationResult.data;
+    const baseUrl = new URL(request.url);
+    const defaultRedirect = `${baseUrl.origin}/${routing.defaultLocale}${ROUTES.AUTH.CONFIRM}?type=recovery`;
+
+    let redirectTo: string;
+    if (redirectToRaw) {
+      try {
+        const resolved = new URL(redirectToRaw, request.url);
+        if (resolved.origin !== baseUrl.origin) {
+          redirectTo = defaultRedirect;
+        } else {
+          redirectTo = resolved.toString();
+        }
+      } catch {
+        redirectTo = defaultRedirect;
+      }
+    } else {
+      redirectTo = defaultRedirect;
+    }
 
     // Step 4: Check Rate Limits
     console.time("rate-limit-check");
