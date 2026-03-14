@@ -1,9 +1,9 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Link, usePathname } from "@/i18n/routing";
+import { Link } from "@/i18n/routing";
 import { useState, useRef } from "react";
 
 import { cn } from "@/lib/utils";
@@ -12,14 +12,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useResetPassword } from "@/hooks/api/use-auth";
-import { forgotPasswordSchema, type ForgotPasswordInput } from "@/lib/validations/auth";
+import { forgotPasswordFormSchema, type ForgotPasswordFormInput } from "@/lib/validations/auth";
 import { ROUTES } from "@/constants";
 import { Captcha } from "@/components/auth/turnstile";
 import type { TurnstileInstance } from "@marsidev/react-turnstile";
 
 export function ForgotPasswordForm({ className, ...props }: React.ComponentPropsWithoutRef<"div">) {
   const t = useTranslations("auth");
-  const pathname = usePathname();
+  const locale = useLocale();
   const [serverError, setServerError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [isCaptchaLoading, setIsCaptchaLoading] = useState(true);
@@ -32,19 +32,19 @@ export function ForgotPasswordForm({ className, ...props }: React.ComponentProps
     handleSubmit,
     setValue,
     formState: { errors },
-  } = useForm<ForgotPasswordInput>({
-    resolver: zodResolver(forgotPasswordSchema),
+  } = useForm<ForgotPasswordFormInput>({
+    resolver: zodResolver(forgotPasswordFormSchema),
     defaultValues: {
       email: "",
       captchaToken: "",
     },
   });
 
-  const onSubmit = (data: ForgotPasswordInput) => {
+  const onSubmit = (data: ForgotPasswordFormInput) => {
     setServerError(null);
-    // Construct redirect URL with locale
-    const locale = pathname.split("/")[1] || "en";
-    const redirectTo = `${window.location.origin}/${locale}/auth/update-password`;
+    // Construct redirect URL to auth confirm route with type recovery
+    const redirectToPath = `${ROUTES.AUTH.CONFIRM}?type=recovery`;
+    const redirectTo = `${window.location.origin}/${locale}${redirectToPath}`;
 
     resetPassword(
       { email: data.email, captchaToken: data.captchaToken, redirectTo },
