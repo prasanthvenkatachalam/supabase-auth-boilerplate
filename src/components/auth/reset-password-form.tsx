@@ -18,11 +18,10 @@ import { Captcha } from "@/components/auth/turnstile";
 import type { TurnstileInstance } from "@marsidev/react-turnstile";
 import { useRef } from "react";
 
-export function UpdatePasswordForm({
+export function ResetPasswordForm({
   className,
-  code,
   ...props
-}: React.ComponentPropsWithoutRef<"div"> & { code?: string | null }) {
+}: React.ComponentPropsWithoutRef<"div">) {
   const t = useTranslations("auth");
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -44,7 +43,6 @@ export function UpdatePasswordForm({
       password: "",
       confirmPassword: "",
       captchaToken: "",
-      code: code || "",
     },
   });
 
@@ -53,13 +51,8 @@ export function UpdatePasswordForm({
     setShowPassword(false);
     setShowConfirmPassword(false);
 
-    if (!code) {
-      setServerError("Invalid or missing reset token. Please request a new password reset.");
-      return;
-    }
-
     updatePassword(
-      { ...data, code },
+      data,
       {
         onSuccess: () => {
           router.replace(ROUTES.PROTECTED);
@@ -85,7 +78,6 @@ export function UpdatePasswordForm({
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <input type="hidden" {...register("captchaToken")} />
-            <input type="hidden" {...register("code")} />
             <div className="space-y-4">
               <div className="grid gap-2">
                 <Label htmlFor="password">{t("password")}</Label>

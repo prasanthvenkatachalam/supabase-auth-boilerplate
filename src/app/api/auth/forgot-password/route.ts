@@ -1,12 +1,12 @@
 /**
  * Forgot Password API Route with Rate Limiting
- * 
+ *
  * This endpoint handles password reset requests with multiple layers of protection:
  * 1. Rate limiting (IP, email, and global) - same limits as signup
  * 2. Input validation using Zod
  * 3. Supabase Admin to generate reset link
  * 4. Background email sending via Zepto Mail
- * 
+ *
  * Architecture decisions:
  * - Using Next.js API Routes for server-side processing
  * - Rate limiting happens BEFORE database queries to protect resources
@@ -18,12 +18,14 @@ import { NextRequest, NextResponse, after } from "next/server";
 import { forgotPasswordSchema } from "@/lib/validations/auth";
 import { checkForgotPasswordRateLimit } from "@/lib/rate-limit";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/constants/messages";
+import { ROUTES } from "@/constants";
+import { routing } from "@/i18n/routing";
 import { RATE_LIMIT_CONFIG } from "@/constants/rate-limit";
 import { sendEmail } from "@/lib/mail";
 import { validateTurnstileToken } from "@/lib/turnstile";
 import { supabaseAdmin } from "@/utils/supabase/admin";
 
-export const runtime = 'nodejs';
+export const runtime = "nodejs";
 
 /**
  * Helper function to extract client IP address
@@ -46,13 +48,13 @@ function getClientIp(request: NextRequest): string {
 
 /**
  * POST /api/auth/forgot-password
- * 
+ *
  * Request body:
  * {
  *   "email": "user@example.com",
  *   "redirectTo": "https://example.com/auth/update-password" (optional)
  * }
- * 
+ *
  * Response codes:
  * - 200: Request processed (always returns success to prevent enumeration)
  * - 400: Invalid input (validation failed)
@@ -63,27 +65,29 @@ export async function POST(request: NextRequest) {
   try {
     // Step 1: Parse request body
     const bodyPromise = request.json();
-    
+
     // Step 2: Get client IP
     const clientIp = getClientIp(request);
 
     // Step 3: Await Body & Validate
     const body = await bodyPromise;
-    
+
     const validationResult = forgotPasswordSchema.safeParse(body);
-    
+
     if (!validationResult.success) {
       return NextResponse.json(
         {
           error: ERROR_MESSAGES.VALIDATION.INVALID_INPUT,
           details: validationResult.error.flatten().fieldErrors,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const { email } = validationResult.data;
-    const redirectTo = body.redirectTo as string | undefined;
+    const redirectTo =
+      (body.redirectTo as string | undefined) ||
+      `${new URL(request.url).origin}/${routing.defaultLocale}${ROUTES.AUTH.CONFIRM}?type=recovery`;
 
     // Step 4: Check Rate Limits
     console.time("rate-limit-check");
@@ -119,15 +123,15 @@ export async function POST(request: NextRequest) {
             "X-RateLimit-Remaining": rateLimitResult.remaining?.toString() || "0",
             "X-RateLimit-Reset": resetDate?.getTime().toString() || "",
           },
-        }
+        },
       );
     }
 
     // Step 5: Validate Turnstile Token
-    // Check captcha after rate limit to protect the verification API, 
+    // Check captcha after rate limit to protect the verification API,
     // but before expensive operations (though rate limit check is cheap).
     // Actually, validating captcha first acts as a better filter against bots?
-    // But then we hit Cloudflare API on every request. 
+    // But then we hit Cloudflare API on every request.
     // Let's stick to Rate Limit -> Captcha -> Logic.
     const { captchaToken } = validationResult.data;
     const captchaValidation = await validateTurnstileToken(captchaToken, clientIp);
@@ -138,7 +142,7 @@ export async function POST(request: NextRequest) {
           error: "Captcha Validation Failed",
           message: captchaValidation.error || "Please complete the captcha correctly.",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -146,6 +150,7 @@ export async function POST(request: NextRequest) {
     // We use admin API to generate the link and send email ourselves
     // This gives us more control over the email template
     console.time("admin-generate-link");
+
     const { data: adminData, error: adminError } = await supabaseAdmin.auth.admin.generateLink({
       type: "recovery",
       email,
@@ -173,7 +178,7 @@ export async function POST(request: NextRequest) {
             "X-RateLimit-Remaining": rateLimitResult.remaining?.toString() || "0",
             "X-RateLimit-Reset": rateLimitResult.resetAt?.getTime().toString() || "",
           },
-        }
+        },
       );
     }
 
@@ -225,29 +230,29 @@ export async function POST(request: NextRequest) {
           "X-RateLimit-Remaining": rateLimitResult.remaining?.toString() || "0",
           "X-RateLimit-Reset": rateLimitResult.resetAt?.getTime().toString() || "",
         },
-      }
+      },
     );
   } catch (error) {
     console.error("Unexpected error in forgot-password route:", error);
-    
+
     return NextResponse.json(
       {
         error: "Internal Server Error",
         message: ERROR_MESSAGES.AUTH.INTERNAL_ERROR,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 /**
  * GET /api/auth/forgot-password
- * 
+ *
  * Returns information about forgot-password rate limits
  */
 export async function GET(request: NextRequest) {
   const clientIp = getClientIp(request);
-  
+
   return NextResponse.json({
     message: "Forgot password endpoint",
     rateLimit: {

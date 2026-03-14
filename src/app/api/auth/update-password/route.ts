@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updatePasswordSchema } from "@/lib/validations/auth";
-import { checkUpdatePasswordRateLimit } from "@/lib/rate-limit";
-import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/constants/messages";
+import { checkResetPasswordRateLimit } from "@/lib/rate-limit";
+import { ERROR_MESSAGES } from "@/constants/messages";
 import { createClient } from "@/utils/supabase/server";
 
-export const runtime = 'nodejs';
+export const runtime = "nodejs";
 
 /**
  * Helper function to extract client IP address
@@ -26,24 +26,24 @@ function getClientIp(request: NextRequest): string {
 
 /**
  * POST /api/auth/update-password
- * 
+ *
  * Handles password update with rate limiting
  */
 export async function POST(request: NextRequest) {
   try {
     const bodyPromise = request.json();
     const clientIp = getClientIp(request);
-    
+
     const body = await bodyPromise;
     const validationResult = updatePasswordSchema.safeParse(body);
-    
+
     if (!validationResult.success) {
       return NextResponse.json(
         {
           error: ERROR_MESSAGES.VALIDATION.INVALID_INPUT,
           details: validationResult.error.flatten().fieldErrors,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -52,28 +52,49 @@ export async function POST(request: NextRequest) {
     // Rate Limit Check
     // We need an identifier. Since the user is logged in (presumably, as they are updating password),
     // we could use their ID. However, this endpoint might be hit after a password reset link,
-    // where they are authenticated via the link. 
+    // where they are authenticated via the link.
     // Ideally we should use the user's email or ID.
-    
-    // Authenticate user first to get their email/ID for rate limiting
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    if (authError || !user) {
-       return NextResponse.json(
-        { error: "Unauthorized", message: "You must be logged in to update your password." },
-        { status: 401 }
+    // For password reset flow, we need to extract the auth code from the URL
+    // The user is not logged in but authenticated via the reset link
+    const supabase = await createClient();
+    const url = new URL(request.url);
+    const code = url.searchParams.get("code");
+
+    if (!code) {
+      return NextResponse.json(
+        {
+          error: "Bad Request",
+          message: "Invalid or missing reset token. Please request a new password reset.",
+        },
+        { status: 400 },
+      );
+    }
+
+    // Exchange the code for a session to authenticate the user temporarily
+    const {
+      data: { user },
+      error: exchangeError,
+    } = await supabase.auth.exchangeCodeForSession(code);
+
+    if (exchangeError || !user) {
+      return NextResponse.json(
+        {
+          error: "Unauthorized",
+          message: "Invalid or expired reset token. Please request a new password reset.",
+        },
+        { status: 401 },
       );
     }
 
     if (!user.email) {
-       return NextResponse.json(
-        { 
-          error: "Bad Request", 
+      return NextResponse.json(
+        {
+          error: "Bad Request",
           message: "User email is missing. Please contact support if this persists.",
-          code: "missing_email"
+          code: "missing_email",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -81,7 +102,7 @@ export async function POST(request: NextRequest) {
 
     console.time("rate-limit-check");
     // Use email for rate limiting as well as IP
-    const rateLimitResult = await checkUpdatePasswordRateLimit(clientIp, email);
+    const rateLimitResult = await checkResetPasswordRateLimit(clientIp, email);
     console.timeEnd("rate-limit-check");
 
     if (!rateLimitResult.allowed) {
@@ -113,7 +134,7 @@ export async function POST(request: NextRequest) {
             "X-RateLimit-Remaining": rateLimitResult.remaining?.toString() || "0",
             "X-RateLimit-Reset": resetDate?.getTime().toString() || "",
           },
-        }
+        },
       );
     }
 
@@ -124,7 +145,7 @@ export async function POST(request: NextRequest) {
 
     if (updateError) {
       console.error("Update password error:", updateError);
-      
+
       let status = 500;
       let errorCode = "update_failed";
 
@@ -132,7 +153,11 @@ export async function POST(request: NextRequest) {
       if (updateError.message.includes("weak") || updateError.status === 400) {
         status = 400;
         errorCode = "weak_password";
-      } else if (updateError.message.includes("previous") || updateError.message.includes("same") || updateError.status === 409) {
+      } else if (
+        updateError.message.includes("previous") ||
+        updateError.message.includes("same") ||
+        updateError.status === 409
+      ) {
         status = 409;
         errorCode = "password_already_used";
       } else if (updateError.status === 422) {
@@ -141,12 +166,12 @@ export async function POST(request: NextRequest) {
       }
 
       return NextResponse.json(
-        { 
-          error: "Update Failed", 
+        {
+          error: "Update Failed",
           message: updateError.message,
-          code: errorCode 
+          code: errorCode,
         },
-        { status }
+        { status },
       );
     }
 
@@ -155,9 +180,8 @@ export async function POST(request: NextRequest) {
         success: true,
         message: "Password updated successfully",
       },
-      { status: 200 }
+      { status: 200 },
     );
-
   } catch (error) {
     console.error("Unexpected error in update-password route:", error);
     return NextResponse.json(
@@ -165,7 +189,7 @@ export async function POST(request: NextRequest) {
         error: "Internal Server Error",
         message: ERROR_MESSAGES.AUTH.INTERNAL_ERROR,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -42,8 +42,9 @@ export function ForgotPasswordForm({ className, ...props }: React.ComponentProps
 
   const onSubmit = (data: ForgotPasswordInput) => {
     setServerError(null);
-    // Construct redirect URL with locale
-    const redirectTo = `${window.location.origin}/${locale}/auth/update-password`;
+    // Construct redirect URL to auth confirm route with type recovery
+    const redirectToPath = `${ROUTES.AUTH.CONFIRM}?type=recovery`;
+    const redirectTo = `${window.location.origin}/${locale}${redirectToPath}`;
 
     resetPassword(
       { email: data.email, captchaToken: data.captchaToken, redirectTo },

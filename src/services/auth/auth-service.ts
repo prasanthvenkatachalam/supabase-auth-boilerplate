@@ -1,18 +1,18 @@
 import { createClient } from "@/utils/supabase/client";
-import { 
-  loginSchema, 
+import {
+  loginSchema,
   signUpSchema,
-  forgotPasswordSchema, 
-  type LoginInput, 
-  type SignUpInput, 
+  forgotPasswordSchema,
+  type LoginInput,
+  type SignUpInput,
   type ForgotPasswordInput,
-  type UpdatePasswordInput
+  type UpdatePasswordInput,
 } from "@/lib/validations/auth";
 
 export const signInWithEmail = async (credentials: LoginInput) => {
   const supabase = createClient();
   const { email, password } = loginSchema.parse(credentials);
-  
+
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -27,14 +27,14 @@ export const signInWithEmail = async (credentials: LoginInput) => {
 
 /**
  * Sign up with email using rate-limited API endpoint
- * 
+ *
  * This now calls our custom API route instead of directly calling Supabase.
  * Benefits:
  * 1. Rate limiting is enforced server-side
  * 2. IP tracking for abuse prevention
  * 3. Better error handling
  * 4. Automatic profile creation via database trigger
- * 
+ *
  * The API route (/api/auth/signup) handles:
  * - Multi-layer rate limiting (IP, email, global)
  * - Input validation
@@ -62,9 +62,7 @@ export const signUpWithEmail = async (credentials: SignUpInput) => {
     if (response.status === 429) {
       const retryAfter = data.retryAfter || 900;
       const minutes = Math.ceil(retryAfter / 60);
-      throw new Error(
-        data.message || `Too many attempts. Please try again in ${minutes} minutes.`
-      );
+      throw new Error(data.message || `Too many attempts. Please try again in ${minutes} minutes.`);
     }
 
     // Email already exists (409)
@@ -86,7 +84,7 @@ export const signUpWithEmail = async (credentials: SignUpInput) => {
 
 /**
  * Reset password for email using rate-limited API endpoint
- * 
+ *
  * This now calls our custom API route instead of directly calling Supabase.
  * Benefits:
  * 1. Rate limiting is enforced server-side
@@ -112,9 +110,7 @@ export const resetPasswordForEmail = async (input: ForgotPasswordInput, redirect
     if (response.status === 429) {
       const retryAfter = data.retryAfter || 900;
       const minutes = Math.ceil(retryAfter / 60);
-      throw new Error(
-        data.message || `Too many attempts. Please try again in ${minutes} minutes.`
-      );
+      throw new Error(data.message || `Too many attempts. Please try again in ${minutes} minutes.`);
     }
 
     // Validation error (400)
@@ -132,7 +128,7 @@ export const resetPasswordForEmail = async (input: ForgotPasswordInput, redirect
 export const updatePassword = async (input: UpdatePasswordInput) => {
   const { password, captchaToken } = input;
 
-  const response = await fetch("/api/auth/update-password", {
+  const response = await fetch("/api/auth/reset-password", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -146,9 +142,7 @@ export const updatePassword = async (input: UpdatePasswordInput) => {
     if (response.status === 429) {
       const retryAfter = data.retryAfter || 900;
       const minutes = Math.ceil(retryAfter / 60);
-      throw new Error(
-        data.message || `Too many attempts. Please try again in ${minutes} minutes.`
-      );
+      throw new Error(data.message || `Too many attempts. Please try again in ${minutes} minutes.`);
     }
 
     throw new Error(data.message || "Failed to update password. Please try again.");
@@ -165,7 +159,7 @@ export const signOut = async () => {
 
 /**
  * Resend verification email
- * 
+ *
  * Calls the API route to resend verification email with rate limiting.
  */
 export const resendVerificationEmail = async (email: string) => {
@@ -186,7 +180,7 @@ export const resendVerificationEmail = async (email: string) => {
       const retryAfter = data.retryAfter || 3600;
       const minutes = Math.ceil(retryAfter / 60);
       throw new Error(
-        data.message || `Too many resend requests. Please try again in ${minutes} minutes.`
+        data.message || `Too many resend requests. Please try again in ${minutes} minutes.`,
       );
     }
 

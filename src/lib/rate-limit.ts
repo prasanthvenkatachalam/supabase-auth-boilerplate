@@ -500,49 +500,49 @@ export async function checkForgotPasswordRateLimit(
 }
 
 /**
- * Update password rate limiters
+ * Reset password rate limiters
  * Uses the same limits as signup to prevent abuse
  */
-export const ipUpdatePasswordRateLimiter = new Ratelimit({
+export const ipResetPasswordRateLimiter = new Ratelimit({
   redis,
   limiter: Ratelimit.slidingWindow(
-    RATE_LIMIT_CONFIG.UPDATE_PASSWORD.IP.LIMIT,
-    RATE_LIMIT_CONFIG.UPDATE_PASSWORD.IP.WINDOW as Duration
+    RATE_LIMIT_CONFIG.RESET_PASSWORD.IP.LIMIT,
+    RATE_LIMIT_CONFIG.RESET_PASSWORD.IP.WINDOW as Duration
   ),
   analytics: false,
-  prefix: RATE_LIMIT_CONFIG.UPDATE_PASSWORD.IP.PREFIX,
+  prefix: RATE_LIMIT_CONFIG.RESET_PASSWORD.IP.PREFIX,
   ephemeralCache: new Map(),
 });
 
-export const emailUpdatePasswordRateLimiter = new Ratelimit({
+export const emailResetPasswordRateLimiter = new Ratelimit({
   redis,
   limiter: Ratelimit.slidingWindow(
-    RATE_LIMIT_CONFIG.UPDATE_PASSWORD.EMAIL.LIMIT,
-    RATE_LIMIT_CONFIG.UPDATE_PASSWORD.EMAIL.WINDOW as Duration
+    RATE_LIMIT_CONFIG.RESET_PASSWORD.EMAIL.LIMIT,
+    RATE_LIMIT_CONFIG.RESET_PASSWORD.EMAIL.WINDOW as Duration
   ),
   analytics: false,
-  prefix: RATE_LIMIT_CONFIG.UPDATE_PASSWORD.EMAIL.PREFIX,
+  prefix: RATE_LIMIT_CONFIG.RESET_PASSWORD.EMAIL.PREFIX,
   ephemeralCache: new Map(),
 });
 
-export const globalUpdatePasswordRateLimiter = new Ratelimit({
+export const globalResetPasswordRateLimiter = new Ratelimit({
   redis,
   limiter: Ratelimit.slidingWindow(
-    RATE_LIMIT_CONFIG.UPDATE_PASSWORD.GLOBAL.LIMIT,
-    RATE_LIMIT_CONFIG.UPDATE_PASSWORD.GLOBAL.WINDOW as Duration
+    RATE_LIMIT_CONFIG.RESET_PASSWORD.GLOBAL.LIMIT,
+    RATE_LIMIT_CONFIG.RESET_PASSWORD.GLOBAL.WINDOW as Duration
   ),
   analytics: false,
-  prefix: RATE_LIMIT_CONFIG.UPDATE_PASSWORD.GLOBAL.PREFIX,
+  prefix: RATE_LIMIT_CONFIG.RESET_PASSWORD.GLOBAL.PREFIX,
   ephemeralCache: new Map(),
 });
 
 /**
- * Check rate limits for update password
+ * Check rate limits for reset password
  * 
  * @param ip - Client IP
  * @param email - User email
  */
-export async function checkUpdatePasswordRateLimit(
+export async function checkResetPasswordRateLimit(
   ip: string,
   email: string
 ): Promise<{
@@ -554,9 +554,9 @@ export async function checkUpdatePasswordRateLimit(
 }> {
   try {
     const [globalResult, ipResult, emailResult] = await Promise.all([
-      globalUpdatePasswordRateLimiter.limit("global"),
-      ipUpdatePasswordRateLimiter.limit(ip),
-      emailUpdatePasswordRateLimiter.limit(email.toLowerCase()),
+      globalResetPasswordRateLimiter.limit("global"),
+      ipResetPasswordRateLimiter.limit(ip),
+      emailResetPasswordRateLimiter.limit(email.toLowerCase()),
     ]);
 
     if (!globalResult.success) {
@@ -600,7 +600,7 @@ export async function checkUpdatePasswordRateLimit(
       resetAt: new Date(emailResult.reset),
     };
   } catch (error) {
-    console.error("Update password rate limit check failed:", error);
+    console.error("Reset password rate limit check failed:", error);
     return { allowed: true };
   }
 }
