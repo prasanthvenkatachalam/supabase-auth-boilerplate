@@ -43,6 +43,12 @@ export const forgotPasswordSchema = z.object({
   redirectTo: safeRedirectTo,
 });
 
+/** Form-only schema (no redirectTo) to satisfy useForm + zodResolver types. */
+export const forgotPasswordFormSchema = z.object({
+  email: z.email("Invalid email address").trim().toLowerCase(),
+  captchaToken: z.string().min(1, "Please complete the captcha"),
+});
+
 export const updatePasswordSchema = z
   .object({
     password: z
@@ -64,4 +70,5 @@ export const updatePasswordSchema = z
 export type LoginInput = z.infer<typeof loginSchema>;
 export type SignUpInput = z.infer<typeof signUpSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type ForgotPasswordFormInput = z.infer<typeof forgotPasswordFormSchema>;
 export type UpdatePasswordInput = z.infer<typeof updatePasswordSchema>;
