@@ -36,7 +36,7 @@ const EMAIL_VERIFICATION_TYPES: readonly EmailOtpType[] = ["signup", "email"];
 
 async function setProfileEmailVerified(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  userId: string
+  userId: string,
 ): Promise<void> {
   const { error } = await supabase
     .from("profiles")
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
       if (type === "recovery") {
         return NextResponse.redirect(`${origin}/${locale}${ROUTES.AUTH.RESET_PASSWORD}`);
       }
-      if (EMAIL_VERIFICATION_TYPES.includes(type!)) {
+      if (type && EMAIL_VERIFICATION_TYPES.includes(type)) {
         await setProfileEmailVerified(supabase, data.user.id);
       }
       const target = `${origin}${next}`;
@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
       params.set("type", type);
       params.set("next", next);
       return NextResponse.redirect(
-        `${origin}/${locale}${ROUTES.AUTH.VERIFY_EMAIL}?${params.toString()}`
+        `${origin}/${locale}${ROUTES.AUTH.VERIFY_EMAIL}?${params.toString()}`,
       );
     }
   }
