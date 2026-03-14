@@ -119,6 +119,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Set profile.email_verified for signup / email (email change) verification
+    if (data.user && (type === "signup" || type === "email")) {
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ email_verified: true })
+        .eq("id", data.user.id);
+      if (updateError) {
+        console.error("[verify-email] Failed to set profile email_verified:", updateError);
+      }
+    }
+
     // Success - email verified
     return NextResponse.json(
       {

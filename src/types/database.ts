@@ -14,90 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      audit_logs: {
-        Row: {
-          action: string
-          created_at: string
-          id: string
-          ip_address: unknown
-          new_values: Json | null
-          old_values: Json | null
-          record_id: string | null
-          table_name: string | null
-          user_agent: string | null
-          user_id: string | null
-        }
-        Insert: {
-          action: string
-          created_at?: string
-          id?: string
-          ip_address?: unknown
-          new_values?: Json | null
-          old_values?: Json | null
-          record_id?: string | null
-          table_name?: string | null
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          action?: string
-          created_at?: string
-          id?: string
-          ip_address?: unknown
-          new_values?: Json | null
-          old_values?: Json | null
-          record_id?: string | null
-          table_name?: string | null
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
-      email_verifications: {
-        Row: {
-          attempts: number | null
-          created_at: string
-          email: string
-          expires_at: string
-          id: string
-          ip_address: unknown
-          is_verified: boolean | null
-          token_hash: string
-          user_agent: string | null
-          user_id: string
-          verification_type: string
-          verified_at: string | null
-        }
-        Insert: {
-          attempts?: number | null
-          created_at?: string
-          email: string
-          expires_at: string
-          id?: string
-          ip_address?: unknown
-          is_verified?: boolean | null
-          token_hash: string
-          user_agent?: string | null
-          user_id: string
-          verification_type?: string
-          verified_at?: string | null
-        }
-        Update: {
-          attempts?: number | null
-          created_at?: string
-          email?: string
-          expires_at?: string
-          id?: string
-          ip_address?: unknown
-          is_verified?: boolean | null
-          token_hash?: string
-          user_agent?: string | null
-          user_id?: string
-          verification_type?: string
-          verified_at?: string | null
-        }
-        Relationships: []
-      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -134,70 +50,11 @@ export type Database = {
         }
         Relationships: []
       }
-      user_sessions: {
-        Row: {
-          created_at: string
-          expires_at: string
-          id: string
-          ip_address: unknown
-          is_active: boolean | null
-          last_activity_at: string | null
-          session_token: string
-          user_agent: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          expires_at: string
-          id?: string
-          ip_address?: unknown
-          is_active?: boolean | null
-          last_activity_at?: string | null
-          session_token: string
-          user_agent?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          expires_at?: string
-          id?: string
-          ip_address?: unknown
-          is_active?: boolean | null
-          last_activity_at?: string | null
-          session_token?: string
-          user_agent?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
     }
     Views: {
       [_ in never]: never
     }
-    Functions: {
-      cleanup_expired_sessions: { Args: never; Returns: undefined }
-      cleanup_expired_verifications: { Args: never; Returns: undefined }
-      get_active_session_count: { Args: { p_user_id: string }; Returns: number }
-      increment_verification_attempts: {
-        Args: { p_token_hash: string }
-        Returns: undefined
-      }
-      is_email_verified: { Args: never; Returns: boolean }
-      log_security_event: {
-        Args: {
-          p_details?: Json
-          p_event_type: string
-          p_ip_address?: unknown
-          p_user_agent?: string
-          p_user_id: string
-        }
-        Returns: string
-      }
-      revoke_all_sessions_except: {
-        Args: { p_current_session_token: string; p_user_id: string }
-        Returns: number
-      }
-    }
+    Functions: {}
     Enums: {
       [_ in never]: never
     }

@@ -31,6 +31,22 @@ function getLocaleFromNext(next: string): string {
   return routing.defaultLocale;
 }
 
+/** OTP types that indicate email was just verified (set profile.email_verified) */
+const EMAIL_VERIFICATION_TYPES: readonly EmailOtpType[] = ["signup", "email"];
+
+async function setProfileEmailVerified(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string
+): Promise<void> {
+  const { error } = await supabase
+    .from("profiles")
+    .update({ email_verified: true })
+    .eq("id", userId);
+  if (error) {
+    console.error("[verify-otp] Failed to set profile email_verified:", error);
+  }
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const token_hash = searchParams.get("token_hash");
@@ -51,10 +67,13 @@ export async function GET(request: NextRequest) {
   const supabase = await createClient();
 
   if (code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error && data?.user) {
       if (type === "recovery") {
         return NextResponse.redirect(`${origin}/${locale}${ROUTES.AUTH.RESET_PASSWORD}`);
+      }
+      if (EMAIL_VERIFICATION_TYPES.includes(type!)) {
+        await setProfileEmailVerified(supabase, data.user.id);
       }
       const target = `${origin}${next}`;
       return NextResponse.redirect(target);
@@ -62,10 +81,13 @@ export async function GET(request: NextRequest) {
   }
 
   if (token_hash && type) {
-    const { error } = await supabase.auth.verifyOtp({ type, token_hash });
-    if (!error) {
+    const { data, error } = await supabase.auth.verifyOtp({ type, token_hash });
+    if (!error && data?.user) {
       if (type === "recovery") {
         return NextResponse.redirect(`${origin}/${locale}${ROUTES.AUTH.RESET_PASSWORD}`);
+      }
+      if (EMAIL_VERIFICATION_TYPES.includes(type)) {
+        await setProfileEmailVerified(supabase, data.user.id);
       }
       const params = new URLSearchParams();
       params.set("token_hash", token_hash);

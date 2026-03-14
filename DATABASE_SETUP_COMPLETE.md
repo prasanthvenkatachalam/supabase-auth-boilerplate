@@ -1,130 +1,43 @@
-# Database Setup Complete ✅
+# Database Setup Complete
 
 ## Overview
 
-The Supabase database schema has been successfully created and optimized for the auth boilerplate project. All tables, security configurations, and optimizations are now in place.
+The auth boilerplate uses a single **profiles** table in the public schema, linked to Supabase `auth.users`. When a user verifies their email (signup or email-change), `profiles.email_verified` is set to `true` by the app.
 
-## Tables Created
+## Table: `profiles`
 
-### 1. `profiles`
+- **Purpose**: User profiles linked to Supabase `auth.users`
+- **Features**: Auto-creation on signup (via database trigger), RLS, `email_verified` flag
+- **Email verification**: When the user completes email verification (via `/api/auth/verify-otp` or `/api/auth/verify-email`) with type `signup` or `email`, the app updates `profiles.email_verified = true` for that user.
 
-- **Purpose**: User profiles linked to Supabase auth.users
-- **Features**: Auto-creation trigger, RLS policies, email verification tracking
-- **Indexes**: email, created_at, composite indexes for performance
+## Security
 
-### 2. `user_sessions`
-
-- **Purpose**: Advanced session tracking and security monitoring
-- **Features**: IP tracking, user agent logging, session expiration
-- **Security**: Active/inactive status, cleanup functions
-
-### 3. `audit_logs`
-
-- **Purpose**: Security audit trail for all user actions
-- **Features**: Automatic logging of profile changes, IP tracking
-- **Security**: Complete audit history with before/after values
-
-### 4. `email_verifications`
-
-- **Purpose**: Enhanced email verification tracking
-- **Features**: Multiple verification types, attempt tracking, expiration
-- **Security**: Token hashing, rate limiting support
-
-## Security Features Implemented
-
-### Row Level Security (RLS)
-
-- ✅ All tables have RLS enabled
-- ✅ Users can only access their own data
-- ✅ Proper security policies in place
-
-### Security Functions
-
-- ✅ `is_email_verified()` - Check email verification status
-- ✅ `get_active_session_count()` - Count active user sessions
-- ✅ `revoke_all_sessions_except()` - Session management
-- ✅ `log_security_event()` - Security event logging
-- ✅ Cleanup functions for expired data
-
-### Triggers
-
-- ✅ Automatic profile creation on signup
-- ✅ Profile change logging
-- ✅ Email verification completion handling
-- ✅ Automatic timestamp updates
-
-## Performance Optimizations
-
-### Indexes
-
-- ✅ Strategic indexes for common queries
-- ✅ Composite indexes for complex queries
-- ✅ Partial indexes for better performance
-- ✅ Foreign key constraints with proper indexing
-
-### Constraints
-
-- ✅ Email format validation
-- ✅ Token length validation
-- ✅ Non-negative attempt counts
-- ✅ Future expiration dates
-
-## Security Status
-
-- ✅ All security advisor warnings resolved
-- ✅ Proper search_path configuration for all functions
-- ✅ No security vulnerabilities detected
+- **RLS**: Enabled on `profiles`; users can read/update their own row (e.g. `id = auth.uid()`).
+- **Trigger**: Profile row is created automatically on signup (if your project has this trigger).
 
 ## TypeScript Types
 
-- ✅ Generated TypeScript types saved to `src/types/database.ts`
-- ✅ Full type safety for all database operations
-- ✅ Complete IntelliSense support
+- Types are maintained in `src/types/database.ts` (only `profiles` table).
 
-## Next Steps
+## Migrations
 
-### Environment Variables
+- **`20250314120000_drop_unused_tables_and_functions.sql`**: Drops unused tables (`audit_logs`, `email_verifications`, `user_sessions`) and their related functions. Apply via Supabase Dashboard → SQL Editor or Supabase CLI if you had created those objects earlier.
 
-Ensure your `.env.local` has the correct Supabase credentials:
+## Environment Variables
+
+Ensure `.env.local` has:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY=your_supabase_publishable_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
-
-⚠️ **Security Warning**: The `SUPABASE_SERVICE_ROLE_KEY` bypasses all RLS policies. Never expose this key in client-side code or commit it to version control. Use only in server-side API routes or secure backend services.
 ```
 
-### Testing
+**Security**: Never expose `SUPABASE_SERVICE_ROLE_KEY` in client-side code or version control. Use only in server-side API routes.
 
-1. Test user signup flow
-2. Verify email verification process
-3. Test session management
-4. Verify audit logging functionality
+## Testing
 
-### Integration
+1. Test signup and email verification; confirm `profiles.email_verified` is set after verification.
+2. Test password reset and login flows.
 
-The database is now ready to work with the existing auth boilerplate code. All API routes and services should work seamlessly with the new schema.
-
-## Migration History
-
-1. `create_profiles_table` - Core profiles table
-2. `create_user_sessions_table` - Session tracking
-3. `create_audit_logs_table` - Audit logging
-4. `create_email_verifications_table` - Email verification
-5. `create_security_functions` - Security utilities
-6. `create_database_constraints_and_indexes` - Performance optimization
-7. `fix_security_issues_proper` - Security fixes
-8. `fix_view_security` - Additional security
-9. `remove_problematic_view` - Final security cleanup
-
-**Status**: ✅ Database schema complete
-
-**Before deploying to production:**
-
-- [ ] Complete comprehensive testing in a staging environment
-- [ ] Set up monitoring and alerting for database performance
-- [ ] Configure automated backups and test restore procedures
-- [ ] Document disaster recovery procedures
-- [ ] Review and test all RLS policies with production-like data
-- [ ] Perform security audit and penetration testing
+**Status**: Schema aligned with app (profiles only).
