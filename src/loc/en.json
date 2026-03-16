@@ -51,7 +51,8 @@
       "captcha_required": "Please complete the captcha",
       "captcha_failed": "Captcha verification failed. Please try again.",
       "captcha_expired": "Captcha verification expired. Please try again.",
-      "invalid_reset_token": "Invalid or missing reset token. Please request a new password reset."
+      "invalid_reset_token": "Invalid or missing reset token. Please request a new password reset.",
+      "invalid_reset_token_hint": "If you just added the redirect URL in Supabase, use the link below to send a new reset email—old links won’t work."
     }
   }
 }

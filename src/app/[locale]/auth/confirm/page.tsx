@@ -40,7 +40,7 @@ export default function AuthConfirmPage() {
       return;
     }
     if (code) {
-      const apiUrl = `/api/auth/verify-otp?code=${encodeURIComponent(code)}&type=${encodeURIComponent(type || "")}&next=${encodeURIComponent(next)}`;
+      const apiUrl = `/api/auth/verify-otp?code=${encodeURIComponent(code)}&type=${encodeURIComponent(type || "recovery")}&next=${encodeURIComponent(next)}`;
       window.location.href = apiUrl;
       return;
     }
@@ -58,22 +58,27 @@ export default function AuthConfirmPage() {
           body: JSON.stringify({ access_token, refresh_token }),
           credentials: "include",
         })
-          .then((res) => {
+          .then(async (res) => {
             if (res.ok) {
               router.replace(resetPath);
             } else {
-              router.replace(errorPath);
+              const err = await res.json().catch(() => ({}));
+              const code =
+                res.status === 400 && (err.error === "Invalid or expired link" || err.message)
+                  ? "invalid_reset_token"
+                  : "default";
+              router.replace(`${errorPath}?error=${encodeURIComponent(code)}`);
             }
           })
-          .catch(() => router.replace(errorPath));
+          .catch(() => router.replace(`${errorPath}?error=default`));
         return;
       }
-      router.replace(errorPath);
+      router.replace(`${errorPath}?error=invalid_reset_token`);
       return;
     }
 
-    // 3. No valid params
-    router.replace(errorPath);
+    // 3. No valid params (e.g. recovery link with no tokens)
+    router.replace(`${errorPath}?error=invalid_reset_token`);
   }, [locale, router]);
 
   return (

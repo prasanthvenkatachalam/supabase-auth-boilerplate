@@ -7,6 +7,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { ROUTES } from "@/constants";
 import { createClient } from "@/utils/supabase/server";
+import { supabaseAdmin } from "@/utils/supabase/admin";
 import { type EmailOtpType } from "@supabase/supabase-js";
 import { routing } from "@/i18n/routing";
 
@@ -34,14 +35,11 @@ function getLocaleFromNext(next: string): string {
 /** OTP types that indicate email was just verified (set profile.email_verified) */
 const EMAIL_VERIFICATION_TYPES: readonly EmailOtpType[] = ["signup", "email"];
 
-async function setProfileEmailVerified(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  userId: string,
-): Promise<void> {
-  const { error } = await supabase
-    .from("profiles")
-    .update({ email_verified: true })
-    .eq("id", userId);
+/** Set profile.email_verified via secure RPC (only service role can call). */
+async function setProfileEmailVerified(userId: string): Promise<void> {
+  const { error } = await supabaseAdmin.rpc("set_profile_email_verified", {
+    target_id: userId,
+  });
   if (error) {
     console.error("[verify-otp] Failed to set profile email_verified:", error);
   }
@@ -73,7 +71,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.redirect(`${origin}/${locale}${ROUTES.AUTH.RESET_PASSWORD}`);
       }
       if (type && EMAIL_VERIFICATION_TYPES.includes(type)) {
-        await setProfileEmailVerified(supabase, data.user.id);
+        await setProfileEmailVerified(data.user.id);
       }
       const target = `${origin}${next}`;
       return NextResponse.redirect(target);
@@ -87,7 +85,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.redirect(`${origin}/${locale}${ROUTES.AUTH.RESET_PASSWORD}`);
       }
       if (EMAIL_VERIFICATION_TYPES.includes(type)) {
-        await setProfileEmailVerified(supabase, data.user.id);
+        await setProfileEmailVerified(data.user.id);
       }
       const params = new URLSearchParams();
       params.set("token_hash", token_hash);
@@ -99,5 +97,9 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.redirect(`${origin}/${locale}${ROUTES.AUTH.ERROR}`);
+  const errorRedirect =
+    type === "recovery"
+      ? `${origin}/${locale}${ROUTES.AUTH.ERROR}?error=invalid_reset_token`
+      : `${origin}/${locale}${ROUTES.AUTH.ERROR}`;
+  return NextResponse.redirect(errorRedirect);
 }

@@ -54,7 +54,12 @@ export type Database = {
     Views: {
       [_ in never]: never
     }
-    Functions: {}
+    Functions: {
+      set_profile_email_verified: {
+        Args: { target_id: string }
+        Returns: undefined
+      }
+    }
     Enums: {
       [_ in never]: never
     }

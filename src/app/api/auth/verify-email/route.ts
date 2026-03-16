@@ -11,6 +11,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
+import { supabaseAdmin } from "@/utils/supabase/admin";
 import { type EmailOtpType } from "@supabase/supabase-js";
 
 export const runtime = 'nodejs';
@@ -119,12 +120,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Set profile.email_verified for signup / email (email change) verification
+    // Set profile.email_verified via secure RPC (only service role can call)
     if (data.user && (type === "signup" || type === "email")) {
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({ email_verified: true })
-        .eq("id", data.user.id);
+      const { error: updateError } = await supabaseAdmin.rpc("set_profile_email_verified", {
+        target_id: data.user.id,
+      });
       if (updateError) {
         console.error("[verify-email] Failed to set profile email_verified:", updateError);
       }
