@@ -8,6 +8,7 @@
     "password": "Password",
     "confirm_password": "Confirm Password",
     "forgot_password": "Forgot Password?",
+    "forgot_password_request_new_link": "Forgot Password? — request a new link",
     "forgot_password_Title": "Forgot Password",
     "forgot_password_desc": "Enter your email to receive reset instructions",
     "update_password": "Update Password",

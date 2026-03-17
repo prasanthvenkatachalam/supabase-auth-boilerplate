@@ -38,7 +38,7 @@ export default async function Page({
                     href={forgotPasswordHref}
                     className="text-sm font-medium text-primary underline underline-offset-4"
                   >
-                    {t("forgot_password")} — request a new link
+                    {t("forgot_password_request_new_link")}
                   </Link>
                 </>
               )}

@@ -1,0 +1,1 @@
+-- No longer used: profile is created in the signup API route (service role), not via trigger.
