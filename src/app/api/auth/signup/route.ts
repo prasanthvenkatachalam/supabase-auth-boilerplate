@@ -5,7 +5,7 @@
  * 1. Rate limiting (IP, email, and global)
  * 2. Input validation using Zod
  * 3. Supabase Auth integration
- * 4. Automatic profile creation (via database trigger)
+ * 4. Profile row created in this route (no DB trigger)
  * 
  * Architecture decisions:
  * - Using Next.js API Routes for server-side processing
@@ -154,17 +154,49 @@ export async function POST(request: NextRequest) {
     console.timeEnd("admin-generate-link");
 
     if (adminError) {
-       if (adminError.message.includes("already registered")) {
-          return NextResponse.json(
-            { error: "Conflict", message: ERROR_MESSAGES.AUTH.EMAIL_EXISTS },
-            { status: 409 }
-          );
-       }
-       console.error("Generate link error:", adminError);
-       return NextResponse.json(
-         { error: ERROR_MESSAGES.AUTH.SIGNUP_FAILED, message: adminError.message },
-         { status: 500 }
-       );
+      if (adminError.message.includes("already registered")) {
+        return NextResponse.json(
+          { error: "Conflict", message: ERROR_MESSAGES.AUTH.EMAIL_EXISTS },
+          { status: 409 }
+        );
+      }
+      console.error("[signup] generateLink error:", adminError);
+      const isDev = process.env.NODE_ENV === "development";
+      return NextResponse.json(
+        {
+          error: ERROR_MESSAGES.AUTH.SIGNUP_FAILED,
+          message: isDev ? adminError.message : ERROR_MESSAGES.AUTH.INTERNAL_ERROR,
+        },
+        { status: 500 }
+      );
+    }
+
+    // Step 5b: Create profile row (service role; no trigger)
+    const user = adminData.user;
+    if (user?.id) {
+      const now = new Date().toISOString();
+      const { error: profileError } = await supabaseAdmin.from("profiles").upsert(
+        {
+          id: user.id,
+          email: user.email ?? email,
+          full_name: user.user_metadata?.full_name ?? null,
+          avatar_url: user.user_metadata?.avatar_url ?? null,
+          created_at: now,
+          updated_at: now,
+        },
+        { onConflict: "id" }
+      );
+      if (profileError) {
+        console.error("[signup] profile upsert error:", profileError);
+        const isDev = process.env.NODE_ENV === "development";
+        return NextResponse.json(
+          {
+            error: ERROR_MESSAGES.AUTH.SIGNUP_FAILED,
+            message: isDev ? profileError.message : ERROR_MESSAGES.AUTH.INTERNAL_ERROR,
+          },
+          { status: 500 }
+        );
+      }
     }
 
     // Step 6: Background Email Sending (Zepto Mail)
@@ -222,14 +254,14 @@ export async function POST(request: NextRequest) {
       }
     );
   } catch (error) {
-    // Catch any unexpected errors
-    console.error("Unexpected error in signup route:", error);
-    
-    // Don't expose internal error details to client
+    console.error("[signup] unexpected error:", error);
+    const isDev = process.env.NODE_ENV === "development";
+    const message =
+      error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
       {
-        error: "Internal Server Error",
-        message: ERROR_MESSAGES.AUTH.INTERNAL_ERROR,
+        error: ERROR_MESSAGES.AUTH.SIGNUP_FAILED,
+        message: isDev ? message : ERROR_MESSAGES.AUTH.INTERNAL_ERROR,
       },
       { status: 500 }
     );

@@ -1,0 +1,1 @@
+-- No longer used: no trigger on auth.users; profile is created in the signup API route.

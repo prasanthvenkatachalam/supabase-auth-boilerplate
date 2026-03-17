@@ -199,11 +199,16 @@ export async function POST(request: NextRequest) {
 
     // Step 6: Background Email Sending
     after(async () => {
-      const recoveryLink = adminData.properties?.action_link;
-      if (!recoveryLink) {
+      // Use hashed_token to build a PKCE-compatible link that points directly
+      // to our /auth/confirm route (token_hash + type in query params).
+      // This avoids Supabase's /auth/v1/verify endpoint which uses the implicit
+      // flow (hash fragments) — incompatible with @supabase/ssr PKCE mode.
+      const hashedToken = adminData.properties?.hashed_token;
+      if (!hashedToken) {
         console.error("[Background] Failed to generate recovery link for", email);
         return;
       }
+      const recoveryLink = `${baseUrl.origin}/${routing.defaultLocale}${ROUTES.AUTH.CONFIRM}?token_hash=${encodeURIComponent(hashedToken)}&type=recovery`;
 
       console.time(`email-send-${email}`);
       const emailResult = await sendEmail({
