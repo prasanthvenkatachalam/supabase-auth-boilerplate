@@ -16,6 +16,7 @@
 
 import { NextRequest, NextResponse, after } from "next/server";
 import { signUpSchema } from "@/lib/validations/auth";
+import { getClientIp } from "@/lib/client-ip";
 import { checkSignupRateLimit } from "@/lib/rate-limit";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/constants/messages";
 import { RATE_LIMIT_CONFIG } from "@/constants/rate-limit";
@@ -24,39 +25,6 @@ import { sendEmail } from "@/lib/mail";
 import { supabaseAdmin } from "@/utils/supabase/admin";
 
 export const runtime = 'nodejs';
-
-/**
- * Helper function to extract client IP address
- * 
- * Checks multiple headers in order of preference:
- * 1. x-forwarded-for: Set by proxies/load balancers (Vercel, AWS, etc.)
- * 2. x-real-ip: Alternative header used by some proxies (Nginx)
- * 3. Remote address from connection
- * 
- * Returns first valid IP found
- * 
- * Security note: In production, ensure your hosting platform sets these headers correctly
- * to prevent IP spoofing
- */
-function getClientIp(request: NextRequest): string {
-  // x-forwarded-for can contain multiple IPs (client, proxy1, proxy2)
-  // We want the first one (the original client)
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  if (forwardedFor) {
-    const ips = forwardedFor.split(",").map((ip) => ip.trim());
-    return ips[0];
-  }
-
-  // Fallback to x-real-ip
-  const realIp = request.headers.get("x-real-ip");
-  if (realIp) {
-    return realIp;
-  }
-
-  // Last resort: use a placeholder (shouldn't happen in production)
-  // In local development, this will be used
-  return "127.0.0.1";
-}
 
 /**
  * POST /api/auth/signup

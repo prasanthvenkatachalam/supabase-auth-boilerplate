@@ -112,6 +112,17 @@ Follow these steps to set up the project locally.
 
     Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## 📚 Documentation
+
+Detailed guides are in the [`docs/`](docs/) folder:
+
+- **[docs/README.md](docs/README.md)** — Documentation index
+- **[Rate limiting setup](docs/rate-limiting/setup.md)** — Upstash Redis setup, configuration, testing
+- **[Rate limiting reference](docs/rate-limiting/implementation.md)** — APIs, limits, and response contract
+- **[Implementation summary](docs/implementation-summary.md)** — Architecture and code explanations
+
+See also [QUICK_START.md](QUICK_START.md) for a short run-through.
+
 ## 📂 Project Structure
 
 ```bash

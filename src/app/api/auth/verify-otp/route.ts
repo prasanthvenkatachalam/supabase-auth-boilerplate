@@ -10,6 +10,8 @@ import { createClient } from "@/utils/supabase/server";
 import { supabaseAdmin } from "@/utils/supabase/admin";
 import { type EmailOtpType } from "@supabase/supabase-js";
 import { routing } from "@/i18n/routing";
+import { getClientIp } from "@/lib/client-ip";
+import { checkVerifyOtpRateLimit } from "@/lib/rate-limit";
 
 const ALLOWED_EMAIL_OTP_TYPES: readonly EmailOtpType[] = [
   "signup",
@@ -46,6 +48,28 @@ async function setProfileEmailVerified(userId: string): Promise<void> {
 }
 
 export async function GET(request: NextRequest) {
+  const clientIp = getClientIp(request);
+  const rateLimitResult = await checkVerifyOtpRateLimit(clientIp);
+
+  if (!rateLimitResult.allowed) {
+    const retryAfterSeconds = rateLimitResult.resetAt
+      ? Math.max(1, Math.ceil((rateLimitResult.resetAt.getTime() - Date.now()) / 1000))
+      : 3600;
+
+    return NextResponse.json(
+      { error: "Too Many Requests", message: "Too many OTP verification attempts.", retryAfter: retryAfterSeconds },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": retryAfterSeconds.toString(),
+          "X-RateLimit-Limit": rateLimitResult.limit?.toString() ?? "0",
+          "X-RateLimit-Remaining": rateLimitResult.remaining?.toString() ?? "0",
+          "X-RateLimit-Reset": rateLimitResult.resetAt?.getTime().toString() ?? "",
+        },
+      },
+    );
+  }
+
   const { searchParams } = new URL(request.url);
   const token_hash = searchParams.get("token_hash");
   const code = searchParams.get("code");

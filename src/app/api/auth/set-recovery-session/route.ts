@@ -10,9 +10,37 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { ERROR_MESSAGES } from "@/constants/messages";
+import { getClientIp } from "@/lib/client-ip";
+import { checkSetRecoverySessionRateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   try {
+    const clientIp = getClientIp(request);
+
+    const rateLimitResult = await checkSetRecoverySessionRateLimit(clientIp);
+
+    if (!rateLimitResult.allowed) {
+      const retryAfterSeconds = rateLimitResult.resetAt
+        ? Math.max(1, Math.ceil((rateLimitResult.resetAt.getTime() - Date.now()) / 1000))
+        : 900;
+
+      return NextResponse.json(
+        {
+          error: "Too Many Requests",
+          message: "Too many recovery session attempts. Please try again later.",
+          retryAfter: retryAfterSeconds,
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": retryAfterSeconds.toString(),
+            "X-RateLimit-Limit": rateLimitResult.limit?.toString() ?? "0",
+            "X-RateLimit-Remaining": rateLimitResult.remaining?.toString() ?? "0",
+            "X-RateLimit-Reset": rateLimitResult.resetAt?.getTime().toString() ?? "",
+          },
+        }
+      );
+    }
     const body = await request.json();
 
     const access_token =

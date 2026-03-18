@@ -84,4 +84,40 @@ export const RATE_LIMIT_CONFIG = {
       PREFIX: "ratelimit:reset-password:global:",
     },
   },
+  VERIFY_EMAIL: {
+    IP: {
+      LIMIT: 30,
+      WINDOW: "1 h",
+      PREFIX: "ratelimit:verify-email:ip:",
+    },
+    GLOBAL: {
+      LIMIT: 2000,
+      WINDOW: "1 h",
+      PREFIX: "ratelimit:verify-email:global:",
+    },
+  },
+  VERIFY_OTP: {
+    IP: {
+      LIMIT: 30,
+      WINDOW: "1 h",
+      PREFIX: "ratelimit:verify-otp:ip:",
+    },
+    GLOBAL: {
+      LIMIT: 2000,
+      WINDOW: "1 h",
+      PREFIX: "ratelimit:verify-otp:global:",
+    },
+  },
+  SET_RECOVERY_SESSION: {
+    IP: {
+      LIMIT: 20,
+      WINDOW: "15 m",
+      PREFIX: "ratelimit:set-recovery-session:ip:",
+    },
+    GLOBAL: {
+      LIMIT: 1000,
+      WINDOW: "15 m",
+      PREFIX: "ratelimit:set-recovery-session:global:",
+    },
+  },
 } as const;

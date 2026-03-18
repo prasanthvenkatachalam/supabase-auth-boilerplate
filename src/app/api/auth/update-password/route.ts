@@ -1,28 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updatePasswordSchema } from "@/lib/validations/auth";
+import { getClientIp } from "@/lib/client-ip";
 import { checkResetPasswordRateLimit } from "@/lib/rate-limit";
 import { ERROR_MESSAGES } from "@/constants/messages";
 import { createClient } from "@/utils/supabase/server";
 
 export const runtime = "nodejs";
-
-/**
- * Helper function to extract client IP address
- */
-function getClientIp(request: NextRequest): string {
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  if (forwardedFor) {
-    const ips = forwardedFor.split(",").map((ip) => ip.trim());
-    return ips[0];
-  }
-
-  const realIp = request.headers.get("x-real-ip");
-  if (realIp) {
-    return realIp;
-  }
-
-  return "127.0.0.1";
-}
 
 /**
  * POST /api/auth/update-password

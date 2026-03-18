@@ -16,6 +16,7 @@
 
 import { NextRequest, NextResponse, after } from "next/server";
 import { forgotPasswordSchema } from "@/lib/validations/auth";
+import { getClientIp } from "@/lib/client-ip";
 import { checkForgotPasswordRateLimit } from "@/lib/rate-limit";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/constants/messages";
 import { ROUTES } from "@/constants";
@@ -26,25 +27,6 @@ import { validateTurnstileToken } from "@/lib/turnstile";
 import { supabaseAdmin } from "@/utils/supabase/admin";
 
 export const runtime = "nodejs";
-
-/**
- * Helper function to extract client IP address
- * Same implementation as signup route
- */
-function getClientIp(request: NextRequest): string {
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  if (forwardedFor) {
-    const ips = forwardedFor.split(",").map((ip) => ip.trim());
-    return ips[0];
-  }
-
-  const realIp = request.headers.get("x-real-ip");
-  if (realIp) {
-    return realIp;
-  }
-
-  return "127.0.0.1";
-}
 
 /**
  * POST /api/auth/forgot-password

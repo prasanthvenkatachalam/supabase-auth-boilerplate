@@ -13,8 +13,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { supabaseAdmin } from "@/utils/supabase/admin";
 import { type EmailOtpType } from "@supabase/supabase-js";
+import { getClientIp } from "@/lib/client-ip";
+import { checkVerifyEmailRateLimit } from "@/lib/rate-limit";
 
 export const runtime = 'nodejs';
+
+const ALLOWED_VERIFY_EMAIL_TYPES: readonly EmailOtpType[] = ["signup", "email", "invite", "magiclink", "recovery"] as const;
+
+function isAllowedVerifyEmailType(value: string | null): value is EmailOtpType {
+  return value !== null && (ALLOWED_VERIFY_EMAIL_TYPES as readonly string[]).includes(value);
+}
 
 /**
  * GET /api/auth/verify-email
@@ -32,12 +40,39 @@ export const runtime = 'nodejs';
  */
 export async function GET(request: NextRequest) {
   try {
+    const clientIp = getClientIp(request);
+    const rateLimitResult = await checkVerifyEmailRateLimit(clientIp);
+
+    if (!rateLimitResult.allowed) {
+      const retryAfterSeconds = rateLimitResult.resetAt
+        ? Math.max(1, Math.ceil((rateLimitResult.resetAt.getTime() - Date.now()) / 1000))
+        : 3600;
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: "rate_limited",
+          message: "Too many verification attempts. Please try again later.",
+          retryAfter: retryAfterSeconds,
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": retryAfterSeconds.toString(),
+            "X-RateLimit-Limit": rateLimitResult.limit?.toString() ?? "0",
+            "X-RateLimit-Remaining": rateLimitResult.remaining?.toString() ?? "0",
+            "X-RateLimit-Reset": rateLimitResult.resetAt?.getTime().toString() ?? "",
+          },
+        }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const token_hash = searchParams.get("token_hash");
-    const type = searchParams.get("type") as EmailOtpType | null;
+    const typeRaw = searchParams.get("type");
 
     // Validate required parameters
-    if (!token_hash || !type) {
+    if (!token_hash || !isAllowedVerifyEmailType(typeRaw)) {
       return NextResponse.json(
         {
           success: false,
@@ -47,6 +82,8 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const type: EmailOtpType = typeRaw;
 
     const supabase = await createClient();
 

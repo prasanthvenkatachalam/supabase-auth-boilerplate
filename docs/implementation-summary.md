@@ -14,8 +14,8 @@ A production-ready, industry-standard rate limiting system for user signups usin
 2. **`src/lib/rate-limit.ts`** - Rate limiting utilities
 3. **`src/app/api/auth/signup/route.ts`** - Rate-limited signup API
 4. **`src/lib/validations/auth.ts`** - Zod validation schemas
-5. **`RATE_LIMITING_SETUP.md`** - Comprehensive setup guide
-6. **`IMPLEMENTATION_SUMMARY.md`** - This file
+5. **`docs/rate-limiting/setup.md`** - Comprehensive setup guide
+6. **`docs/implementation-summary.md`** - This file
 
 ### 🔧 Modified Files
 
@@ -742,4 +742,4 @@ Your signup flow is now protected against:
 
 ---
 
-**Questions?** Check `RATE_LIMITING_SETUP.md` for detailed setup instructions.
+**Questions?** Check [Rate Limiting Setup](rate-limiting/setup.md) for detailed setup instructions.
