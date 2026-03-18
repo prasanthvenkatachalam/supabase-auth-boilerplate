@@ -1,17 +1,22 @@
 # Documentation
 
-Project documentation is organized by topic.
+All project documentation lives in this folder.
+
+---
 
 ## Contents
 
 | Document | Description |
-|----------|-------------|
-| [Implementation Summary](implementation-summary.md) | Architecture, code explanations, and project overview |
-| [Rate Limiting — Setup](rate-limiting/setup.md) | Upstash Redis setup, configuration, testing, and troubleshooting |
-| [Rate Limiting — Implementation](rate-limiting/implementation.md) | Technical reference: APIs, limits, IP extraction, and response contract |
+|---|---|
+| [quick-start.md](quick-start.md) | Set up and run the project from scratch — Upstash, env vars, first test |
+| [database.md](database.md) | `profiles` table schema, RLS policies, triggers, migrations, TypeScript types |
+| [rate-limiting.md](rate-limiting.md) | Conceptual guide — what rate limiting is, how algorithms work, the three-tier architecture |
+| [rate-limiting-reference.md](rate-limiting-reference.md) | Technical reference — per-API limits, Redis key patterns, HTTP 429 contract, IP extraction |
 
-## Related
+---
 
-- [README](../README.md) — Getting started and project structure
-- [QUICK_START](../QUICK_START.md) — Quick setup and run
-- [DATABASE_SETUP_COMPLETE](../DATABASE_SETUP_COMPLETE.md) — Database and profiles setup
+## Top-Level Files
+
+| File | Description |
+|---|---|
+| [README.md](../README.md) | Project overview, feature list, tech stack, contributing guide |

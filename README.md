@@ -114,14 +114,12 @@ Follow these steps to set up the project locally.
 
 ## 📚 Documentation
 
-Detailed guides are in the [`docs/`](docs/) folder:
+All guides are in the [`docs/`](docs/) folder:
 
-- **[docs/README.md](docs/README.md)** — Documentation index
-- **[Rate limiting setup](docs/rate-limiting/setup.md)** — Upstash Redis setup, configuration, testing
-- **[Rate limiting reference](docs/rate-limiting/implementation.md)** — APIs, limits, and response contract
-- **[Implementation summary](docs/implementation-summary.md)** — Architecture and code explanations
-
-See also [QUICK_START.md](QUICK_START.md) for a short run-through.
+- **[docs/quick-start.md](docs/quick-start.md)** — Set up from scratch: Upstash, env vars, first test
+- **[docs/database.md](docs/database.md)** — `profiles` table, RLS, triggers, migrations
+- **[docs/rate-limiting.md](docs/rate-limiting.md)** — Rate limiting concepts, algorithms, three-tier architecture
+- **[docs/rate-limiting-reference.md](docs/rate-limiting-reference.md)** — Per-API limits, Redis key patterns, HTTP 429 contract
 
 ## 📂 Project Structure
 
