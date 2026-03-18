@@ -10,6 +10,7 @@ import { createClient } from "@/utils/supabase/server";
 import { supabaseAdmin } from "@/utils/supabase/admin";
 import { type EmailOtpType } from "@supabase/supabase-js";
 import { routing } from "@/i18n/routing";
+import { getClientIp } from "@/lib/client-ip";
 import { checkVerifyOtpRateLimit } from "@/lib/rate-limit";
 
 const ALLOWED_EMAIL_OTP_TYPES: readonly EmailOtpType[] = [
@@ -23,21 +24,6 @@ const ALLOWED_EMAIL_OTP_TYPES: readonly EmailOtpType[] = [
 
 function isEmailOtpType(value: string | null): value is EmailOtpType {
   return value !== null && (ALLOWED_EMAIL_OTP_TYPES as readonly string[]).includes(value);
-}
-
-function getClientIp(request: NextRequest): string {
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  if (forwardedFor) {
-    const ips = forwardedFor.split(",").map((ip) => ip.trim());
-    return ips[0];
-  }
-
-  const realIp = request.headers.get("x-real-ip");
-  if (realIp) {
-    return realIp;
-  }
-
-  return "127.0.0.1";
 }
 
 function getLocaleFromNext(next: string): string {

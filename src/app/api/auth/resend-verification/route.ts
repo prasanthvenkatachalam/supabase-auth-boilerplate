@@ -6,6 +6,7 @@
  */
 
 import { NextRequest, NextResponse, after } from "next/server";
+import { getClientIp } from "@/lib/client-ip";
 import { checkResendVerificationRateLimit } from "@/lib/rate-limit";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/constants/messages";
 import { RATE_LIMIT_CONFIG } from "@/constants/rate-limit";
@@ -22,24 +23,6 @@ export const runtime = 'nodejs';
 const resendVerificationSchema = z.object({
   email: z.string().email("Invalid email address"),
 });
-
-/**
- * Helper function to extract client IP address
- */
-function getClientIp(request: NextRequest): string {
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  if (forwardedFor) {
-    const ips = forwardedFor.split(",").map((ip) => ip.trim());
-    return ips[0];
-  }
-
-  const realIp = request.headers.get("x-real-ip");
-  if (realIp) {
-    return realIp;
-  }
-
-  return "127.0.0.1";
-}
 
 /**
  * Find a user by email using listUsers (Admin API has no getUserByEmail).

@@ -10,24 +10,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { ERROR_MESSAGES } from "@/constants/messages";
+import { getClientIp } from "@/lib/client-ip";
 import { checkSetRecoverySessionRateLimit } from "@/lib/rate-limit";
-
-
-
-function getClientIp(request: NextRequest): string {
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  if (forwardedFor) {
-    const ips = forwardedFor.split(",").map((ip) => ip.trim());
-    return ips[0];
-  }
-
-  const realIp = request.headers.get("x-real-ip");
-  if (realIp) {
-    return realIp;
-  }
-
-  return "127.0.0.1";
-}
 
 export async function POST(request: NextRequest) {
   try {
