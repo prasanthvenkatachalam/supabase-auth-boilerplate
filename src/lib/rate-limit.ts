@@ -13,6 +13,34 @@ import { Ratelimit, type Duration } from "@upstash/ratelimit";
 import { redis } from "@/lib/upstash";
 import { RATE_LIMIT_CONFIG } from "@/constants/rate-limit";
 
+type RateLimitScope = "global" | "ip" | "email";
+
+type RateLimitCheckResult = {
+  allowed: boolean;
+  limitType?: RateLimitScope;
+  limit?: number;
+  remaining?: number;
+  resetAt?: Date;
+};
+
+function sanitizeRateLimitEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+function toRateLimitExceededResult(
+  limitType: RateLimitScope,
+  result: { limit: number; remaining: number; reset: number }
+): RateLimitCheckResult {
+  return {
+    allowed: false,
+    limitType,
+    limit: result.limit,
+    remaining: result.remaining,
+    resetAt: new Date(result.reset),
+  };
+}
+
+
 /**
  * Rate Limiting Strategies:
  * 
@@ -97,7 +125,7 @@ export async function checkSignupRateLimit(
     const [globalResult, ipResult, emailResult] = await Promise.all([
       globalSignupRateLimiter.limit("global"),
       ipRateLimiter.limit(ip),
-      emailRateLimiter.limit(email.toLowerCase()),
+      emailRateLimiter.limit(sanitizeRateLimitEmail(email)),
     ]);
 
     // Priority 1: Global limit check
@@ -238,7 +266,7 @@ export async function checkLoginRateLimit(
     const [globalResult, ipResult, emailResult] = await Promise.all([
       globalLoginRateLimiter.limit("global"),
       ipLoginRateLimiter.limit(ip),
-      emailLoginRateLimiter.limit(email.toLowerCase()),
+      emailLoginRateLimiter.limit(sanitizeRateLimitEmail(email)),
     ]);
 
     if (!globalResult.success) {
@@ -344,7 +372,7 @@ export async function checkResendVerificationRateLimit(
     const [globalResult, ipResult, emailResult] = await Promise.all([
       globalResendVerificationRateLimiter.limit("global"),
       ipResendVerificationRateLimiter.limit(ip),
-      emailResendVerificationRateLimiter.limit(email.toLowerCase()),
+      emailResendVerificationRateLimiter.limit(sanitizeRateLimitEmail(email)),
     ]);
 
     if (!globalResult.success) {
@@ -450,7 +478,7 @@ export async function checkForgotPasswordRateLimit(
     const [globalResult, ipResult, emailResult] = await Promise.all([
       globalForgotPasswordRateLimiter.limit("global"),
       ipForgotPasswordRateLimiter.limit(ip),
-      emailForgotPasswordRateLimiter.limit(email.toLowerCase()),
+      emailForgotPasswordRateLimiter.limit(sanitizeRateLimitEmail(email)),
     ]);
 
     if (!globalResult.success) {
@@ -556,7 +584,7 @@ export async function checkResetPasswordRateLimit(
     const [globalResult, ipResult, emailResult] = await Promise.all([
       globalResetPasswordRateLimiter.limit("global"),
       ipResetPasswordRateLimiter.limit(ip),
-      emailResetPasswordRateLimiter.limit(email.toLowerCase()),
+      emailResetPasswordRateLimiter.limit(sanitizeRateLimitEmail(email)),
     ]);
 
     if (!globalResult.success) {
@@ -601,6 +629,192 @@ export async function checkResetPasswordRateLimit(
     };
   } catch (error) {
     console.error("Reset password rate limit check failed:", error);
+    return { allowed: true };
+  }
+}
+
+
+/**
+ * Helper: extract the first exceeded limiter in priority order.
+ * Keeps response behavior deterministic and easy to reason about.
+ */
+function resolveExceededLimiter(
+  checks: Array<{ type: RateLimitScope; success: boolean; limit: number; remaining: number; reset: number }>
+): RateLimitCheckResult | null {
+  for (const check of checks) {
+    if (!check.success) {
+      return toRateLimitExceededResult(check.type, check);
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Helper: builds a success payload using the strictest remaining counter.
+ */
+function buildAllowedResult(
+  checks: Array<{ limit: number; remaining: number; reset: number }>,
+  reference: { limit: number; reset: number }
+): RateLimitCheckResult {
+  return {
+    allowed: true,
+    remaining: Math.min(...checks.map((check) => check.remaining)),
+    limit: reference.limit,
+    resetAt: new Date(reference.reset),
+  };
+}
+
+/**
+ * Verify-email route rate limiting
+ *
+ * Security rationale:
+ * - IP + global limits reduce brute-force token guessing and abuse.
+ * - We intentionally do not add email-scoped limiting because this endpoint
+ *   is token-based and does not require an email input.
+ */
+export const ipVerifyEmailRateLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(
+    RATE_LIMIT_CONFIG.VERIFY_EMAIL.IP.LIMIT,
+    RATE_LIMIT_CONFIG.VERIFY_EMAIL.IP.WINDOW as Duration
+  ),
+  analytics: false,
+  prefix: RATE_LIMIT_CONFIG.VERIFY_EMAIL.IP.PREFIX,
+  ephemeralCache: new Map(),
+});
+
+export const globalVerifyEmailRateLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(
+    RATE_LIMIT_CONFIG.VERIFY_EMAIL.GLOBAL.LIMIT,
+    RATE_LIMIT_CONFIG.VERIFY_EMAIL.GLOBAL.WINDOW as Duration
+  ),
+  analytics: false,
+  prefix: RATE_LIMIT_CONFIG.VERIFY_EMAIL.GLOBAL.PREFIX,
+  ephemeralCache: new Map(),
+});
+
+export async function checkVerifyEmailRateLimit(ip: string): Promise<RateLimitCheckResult> {
+  try {
+    const [globalResult, ipResult] = await Promise.all([
+      globalVerifyEmailRateLimiter.limit("global"),
+      ipVerifyEmailRateLimiter.limit(ip),
+    ]);
+
+    const exceeded = resolveExceededLimiter([
+      { type: "global", ...globalResult },
+      { type: "ip", ...ipResult },
+    ]);
+
+    if (exceeded) {
+      return exceeded;
+    }
+
+    return buildAllowedResult([globalResult, ipResult], ipResult);
+  } catch (error) {
+    console.error("Verify email rate limit check failed:", error);
+    return { allowed: true };
+  }
+}
+
+/**
+ * Verify-otp route rate limiting.
+ *
+ * Protects session-establishing callback against high-rate token verification attempts.
+ */
+export const ipVerifyOtpRateLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(
+    RATE_LIMIT_CONFIG.VERIFY_OTP.IP.LIMIT,
+    RATE_LIMIT_CONFIG.VERIFY_OTP.IP.WINDOW as Duration
+  ),
+  analytics: false,
+  prefix: RATE_LIMIT_CONFIG.VERIFY_OTP.IP.PREFIX,
+  ephemeralCache: new Map(),
+});
+
+export const globalVerifyOtpRateLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(
+    RATE_LIMIT_CONFIG.VERIFY_OTP.GLOBAL.LIMIT,
+    RATE_LIMIT_CONFIG.VERIFY_OTP.GLOBAL.WINDOW as Duration
+  ),
+  analytics: false,
+  prefix: RATE_LIMIT_CONFIG.VERIFY_OTP.GLOBAL.PREFIX,
+  ephemeralCache: new Map(),
+});
+
+export async function checkVerifyOtpRateLimit(ip: string): Promise<RateLimitCheckResult> {
+  try {
+    const [globalResult, ipResult] = await Promise.all([
+      globalVerifyOtpRateLimiter.limit("global"),
+      ipVerifyOtpRateLimiter.limit(ip),
+    ]);
+
+    const exceeded = resolveExceededLimiter([
+      { type: "global", ...globalResult },
+      { type: "ip", ...ipResult },
+    ]);
+
+    if (exceeded) {
+      return exceeded;
+    }
+
+    return buildAllowedResult([globalResult, ipResult], ipResult);
+  } catch (error) {
+    console.error("Verify OTP rate limit check failed:", error);
+    return { allowed: true };
+  }
+}
+
+/**
+ * set-recovery-session rate limiting.
+ *
+ * This route consumes bearer-like tokens (access/refresh) and sets cookies, so
+ * limiting request velocity is important to reduce credential stuffing attempts.
+ */
+export const ipSetRecoverySessionRateLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(
+    RATE_LIMIT_CONFIG.SET_RECOVERY_SESSION.IP.LIMIT,
+    RATE_LIMIT_CONFIG.SET_RECOVERY_SESSION.IP.WINDOW as Duration
+  ),
+  analytics: false,
+  prefix: RATE_LIMIT_CONFIG.SET_RECOVERY_SESSION.IP.PREFIX,
+  ephemeralCache: new Map(),
+});
+
+export const globalSetRecoverySessionRateLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(
+    RATE_LIMIT_CONFIG.SET_RECOVERY_SESSION.GLOBAL.LIMIT,
+    RATE_LIMIT_CONFIG.SET_RECOVERY_SESSION.GLOBAL.WINDOW as Duration
+  ),
+  analytics: false,
+  prefix: RATE_LIMIT_CONFIG.SET_RECOVERY_SESSION.GLOBAL.PREFIX,
+  ephemeralCache: new Map(),
+});
+
+export async function checkSetRecoverySessionRateLimit(ip: string): Promise<RateLimitCheckResult> {
+  try {
+    const [globalResult, ipResult] = await Promise.all([
+      globalSetRecoverySessionRateLimiter.limit("global"),
+      ipSetRecoverySessionRateLimiter.limit(ip),
+    ]);
+
+    const exceeded = resolveExceededLimiter([
+      { type: "global", ...globalResult },
+      { type: "ip", ...ipResult },
+    ]);
+
+    if (exceeded) {
+      return exceeded;
+    }
+
+    return buildAllowedResult([globalResult, ipResult], ipResult);
+  } catch (error) {
+    console.error("Set recovery session rate limit check failed:", error);
     return { allowed: true };
   }
 }
