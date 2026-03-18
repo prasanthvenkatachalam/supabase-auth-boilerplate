@@ -1,6 +1,12 @@
+# Rate Limiting — Implementation Reference
+
+Technical reference for the multi-layer, server-side rate limiting backed by Upstash Redis and `@upstash/ratelimit`.
+
+---
+
 ## Overview
 
-This project uses **multi-layer, server-side rate limiting** backed by Upstash Redis and `@upstash/ratelimit`.
+This project uses **multi-layer, server-side rate limiting** for auth endpoints.
 
 ### Design Principles
 
@@ -8,18 +14,20 @@ This project uses **multi-layer, server-side rate limiting** backed by Upstash R
 - **Fail-open for availability:** If Redis/rate-limit checks fail, requests are temporarily allowed and the error is logged.
 - **Client transparency:** `429` responses include `Retry-After` and rate-limit metadata headers.
 - **Enumeration resistance:** Auth flows involving email identities return generic responses when appropriate.
-- **Normalization:** Email-based keys are normalized to `trim().toLowerCase()` before rate-limit checks; IP-based keys should also be normalized (see [IP address extraction](#ip-address-extraction-for-ip-based-rate-limiting) below) so that rate-limit key generation and checks are consistent and spoof-resistant.
+- **Normalization:** Email-based keys are normalized to `trim().toLowerCase()` before rate-limit checks; IP-based keys are normalized (see [IP address extraction](#ip-address-extraction-for-ip-based-rate-limiting)) so that rate-limit key generation and checks are consistent and spoof-resistant.
 
-### IP address extraction for IP-based rate limiting
+---
 
-IP-based rate limiting depends on a stable, spoof-resistant client identifier. This fits under **Defense in depth** (IP is one of several scopes) and **Normalization** (keys must be comparable and not trivially forged). The implementation lives in `@/lib/client-ip` and is used by all rate-limited auth routes.
+## IP Address Extraction for IP-Based Rate Limiting
 
-- **Header inspection order:** The code does **not** use the leftmost `X-Forwarded-For` value (which is spoofable). Instead it parses `X-Forwarded-For` **right-to-left**, skips any IP that matches `TRUSTED_PROXY_CIDRS` (via the canonical `isTrustedProxy` / CIDR utility), and returns the **first IP that is not a trusted proxy**; if none is found, it then falls back to `X-Real-IP` → `CF-Connecting-IP` → `request.socket.remoteAddress` → the sentinel `"unknown"` (with a one-time console warning). Addresses are validated and normalized (`parseAndNormalizeIp`) before comparison so the chain is properly validated rather than trusting the leftmost entry. The previous hardcoded `127.0.0.1` fallback has been removed so non-proxied clients are not collapsed into one rate-limit bucket.
-- **Trusted proxies / CDNs:** A configurable allowlist is implemented via the **`TRUSTED_PROXY_CIDRS`** environment variable (comma-separated CIDR strings). The helper **`isTrustedProxy(remoteAddr)`** in `@/lib/client-ip` checks whether the direct connection peer is in that list. **`getClientIp(request)`** (and **`parseForwardedHeaders(request)`**) accept forwarded headers only when the direct peer is trusted; otherwise the code uses the connection remote address or the sentinel `"unknown"`. Configuration loading and validation run at first use: invalid CIDR entries are skipped and logged. Set `TRUSTED_PROXY_CIDRS` to your reverse proxy / load balancer / CDN CIDRs (e.g. Vercel, Cloudflare, or AWS ranges) so that forwarded headers are only honored when the request actually comes from those IPs.
+IP-based rate limiting depends on a stable, spoof-resistant client identifier. The implementation lives in `@/lib/client-ip` and is used by all rate-limited auth routes.
+
+- **Header inspection order:** The code does **not** use the leftmost `X-Forwarded-For` value (which is spoofable). Instead it parses `X-Forwarded-For` **right-to-left**, skips any IP that matches `TRUSTED_PROXY_CIDRS` (via the canonical `isTrustedProxy` / CIDR utility), and returns the **first IP that is not a trusted proxy**; if none is found, it then falls back to `X-Real-IP` → `CF-Connecting-IP` → `request.socket.remoteAddress` → the sentinel `"unknown"` (with a one-time console warning). Addresses are validated and normalized (`parseAndNormalizeIp`) before comparison.
+- **Trusted proxies / CDNs:** A configurable allowlist is implemented via the **`TRUSTED_PROXY_CIDRS`** environment variable (comma-separated CIDR strings). The helper **`isTrustedProxy(remoteAddr)`** in `@/lib/client-ip` checks whether the direct connection peer is in that list. **`getClientIp(request)`** (and **`parseForwardedHeaders(request)`**) accept forwarded headers only when the direct peer is trusted; otherwise the code uses the connection remote address or the sentinel `"unknown"`. Set `TRUSTED_PROXY_CIDRS` to your reverse proxy / load balancer / CDN CIDRs (e.g. Vercel, Cloudflare, or AWS ranges).
 - **IPv6 normalization:** The chosen IP is normalized before use as a rate-limit key: **canonical form** (lowercase), **zone identifiers stripped** (e.g. `%eth0`), and **IPv4-mapped IPv6 collapsed** to IPv4 (e.g. `::ffff:192.0.2.1` → `192.0.2.1`) so the same client is not counted under two keys.
-- **Anti-spoofing:** When the direct peer is available, it is validated with **`isTrustedProxy(directPeer)`** before any forwarding header is used. If the peer is not in `trustedProxyCidrs`, forwarded headers are ignored and the direct peer (or `"unknown"`) is used. When no address can be determined, the code logs a one-time warning so operators can detect misconfiguration.
+- **Anti-spoofing:** When the direct peer is available, it is validated with **`isTrustedProxy(directPeer)`** before any forwarding header is used. If the peer is not in `trustedProxyCidrs`, forwarded headers are ignored and the direct peer (or `"unknown"`) is used.
 
-Where this fits: IP extraction runs **before** rate-limit key generation; the result is the IP scope key used in `lib/rate-limit` and in the “Keying Strategy” column of the rate-limited APIs table above. The shared helper in `@/lib/client-ip` ensures the same extraction and normalization logic is used everywhere.
+The shared helper in `@/lib/client-ip` ensures the same extraction and normalization logic is used everywhere.
 
 ---
 
@@ -45,7 +53,7 @@ All configured limiters currently use:
 | `GET /api/auth/verify-otp`            | Global + IP         | `global`, client IP                          | callback token/code spraying                          |
 | `POST /api/auth/set-recovery-session` | Global + IP         | `global`, client IP                          | repeated token/session establishment attempts         |
 
-> Note: Email scope is intentionally not used for token-only endpoints (e.g., `verify-email`, `verify-otp`) because request payloads do not include a trusted email identifier.
+> **Note:** Email scope is intentionally not used for token-only endpoints (e.g., `verify-email`, `verify-otp`) because request payloads do not include a trusted email identifier.
 
 ---
 

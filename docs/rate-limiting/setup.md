@@ -1,8 +1,9 @@
 # Rate Limiting Setup Guide
 
-This guide explains the rate limiting implementation using Upstash Redis for the signup flow.
+This guide explains the rate limiting implementation using Upstash Redis for the signup and auth flows.
 
 ## Table of Contents
+
 - [Overview](#overview)
 - [Architecture](#architecture)
 - [Setup Instructions](#setup-instructions)
@@ -11,17 +12,22 @@ This guide explains the rate limiting implementation using Upstash Redis for the
 - [Testing](#testing)
 - [Monitoring](#monitoring)
 - [Troubleshooting](#troubleshooting)
+- [Security Best Practices](#security-best-practices)
+- [Production Checklist](#production-checklist)
+- [Additional Resources](#additional-resources)
 
 ---
 
 ## Overview
 
-This application implements **multi-layer rate limiting** to protect the signup endpoint from abuse, spam, and DDoS attacks. We use **Upstash Redis** because it's:
+This application implements **multi-layer rate limiting** to protect auth endpoints from abuse, spam, and DDoS attacks. We use **Upstash Redis** because it's:
 
 - **Serverless-first**: Perfect for Next.js and Vercel deployments
 - **HTTP-based**: No persistent connections needed
 - **Globally replicated**: Low latency worldwide
 - **Cost-effective**: Pay-per-request pricing
+
+---
 
 ## Architecture
 
@@ -47,10 +53,10 @@ User Request → API Route → Rate Limit Checks → Supabase Auth → Profile C
    - Sliding window algorithm
    - Analytics tracking
 
-3. **API Route** (`src/app/api/auth/signup/route.ts`)
-   - Handles signup requests
-   - Enforces rate limits
-   - Returns proper HTTP status codes
+3. **API Routes** (e.g. `src/app/api/auth/signup/route.ts`)
+   - Handle auth requests
+   - Enforce rate limits
+   - Return proper HTTP status codes
 
 4. **Database Migration** (Supabase)
    - Creates `profiles` table
@@ -135,34 +141,33 @@ curl -X POST http://localhost:3000/api/auth/signup \
 ### 3. Rate Limit Checks (Multi-Layer)
 
 #### Layer 1: Global Limit
-```typescript
-// Protects entire system
-// Limit: 100 signups per minute across all users
-// Purpose: Prevent DDoS attacks
-```
+
+- Protects entire system
+- Limit: 100 signups per minute across all users
+- Purpose: Prevent DDoS attacks
 
 #### Layer 2: IP-Based Limit
-```typescript
-// Protects per network
-// Limit: 3 signups per 15 minutes per IP
-// Purpose: Prevent brute force from single source
-```
+
+- Protects per network
+- Limit: 3 signups per 15 minutes per IP
+- Purpose: Prevent brute force from single source
 
 #### Layer 3: Email-Based Limit
-```typescript
-// Protects per email
-// Limit: 5 signups per hour per email
-// Purpose: Prevent account enumeration
-```
+
+- Protects per email
+- Limit: 5 signups per hour per email
+- Purpose: Prevent account enumeration
 
 ### 4. Sliding Window Algorithm
 
 **Why Sliding Window?**
+
 - More accurate than fixed window
 - Prevents burst attacks at window boundaries
 - Smooth rate limiting
 
 **Example:**
+
 ```
 Fixed Window (less secure):
 09:00 - 10:00: 5 requests ✓
@@ -179,10 +184,11 @@ User can't burst at boundaries
 ```
 ratelimit:signup:global:global         → Global counter
 ratelimit:signup:ip:192.168.1.1        → IP-based counter
-ratelimit:signup:email:user@email.com  → Email-based counter
+ratelimit:signup:email:user@email.com   → Email-based counter
 ```
 
 Each key stores:
+
 - Request count
 - Timestamp of requests
 - Automatic expiration (TTL)
@@ -190,6 +196,7 @@ Each key stores:
 ### 6. Rate Limit Response
 
 If **allowed**:
+
 ```json
 {
   "success": true,
@@ -199,6 +206,7 @@ If **allowed**:
 ```
 
 If **rate limited**:
+
 ```json
 {
   "error": "Rate limit exceeded",
@@ -210,6 +218,7 @@ If **rate limited**:
 ```
 
 Headers returned:
+
 ```
 HTTP/1.1 429 Too Many Requests
 Retry-After: 900
@@ -224,7 +233,7 @@ X-RateLimit-Reset: 1704672000000
 
 ### Adjusting Rate Limits
 
-Edit `src/lib/rate-limit.ts`:
+Edit `src/constants/rate-limit.ts` (or the limiters in `src/lib/rate-limit.ts` as applicable):
 
 ```typescript
 // More strict (production)
@@ -246,19 +255,22 @@ export const ipRateLimiter = new Ratelimit({
 
 ### Rate Limit Strategies
 
-**1. Sliding Window** (Current - Recommended)
+**1. Sliding Window** (Current — Recommended)
+
 ```typescript
 Ratelimit.slidingWindow(requests, window)
 // Most accurate, prevents bursts
 ```
 
 **2. Fixed Window**
+
 ```typescript
 Ratelimit.fixedWindow(requests, window)
 // Simpler, allows burst at boundaries
 ```
 
 **3. Token Bucket**
+
 ```typescript
 Ratelimit.tokenBucket(refillRate, interval, bucketSize)
 // Allows controlled bursts
@@ -271,6 +283,7 @@ Ratelimit.tokenBucket(refillRate, interval, bucketSize)
 ### Test Rate Limiting Locally
 
 #### 1. Test Normal Signup
+
 ```bash
 curl -X POST http://localhost:3000/api/auth/signup \
   -H "Content-Type: application/json" \
@@ -280,6 +293,7 @@ curl -X POST http://localhost:3000/api/auth/signup \
 Expected: `201 Created`
 
 #### 2. Test Rate Limit (IP)
+
 ```bash
 # Run this script to hit IP limit (3 attempts)
 for i in {1..5}; do
@@ -293,6 +307,7 @@ done
 Expected: First 3 succeed, then `429 Too Many Requests`
 
 #### 3. Test Email Rate Limit
+
 ```bash
 # Try same email multiple times
 for i in {1..6}; do
@@ -306,6 +321,7 @@ done
 Expected: After 2nd attempt, `409 Conflict` (email exists)
 
 #### 4. Check Rate Limit Info
+
 ```bash
 curl http://localhost:3000/api/auth/signup
 ```
@@ -344,7 +360,7 @@ async function testRateLimit() {
       }),
     });
     console.log(`Attempt ${i + 1}:`, res.status);
-    
+
     if (res.status === 429) {
       const data = await res.json();
       console.log("Rate limited!", data.message);
@@ -365,8 +381,7 @@ testRateLimit();
 1. Go to [Upstash Console](https://console.upstash.com/)
 2. Click your database
 3. Go to **"Data Browser"**
-4. View keys:
-   - `ratelimit:signup:*`
+4. View keys: `ratelimit:signup:*`
 
 ### Check Redis Analytics
 
@@ -381,7 +396,7 @@ console.log(analytics);
 
 ### Monitor in Production
 
-Add logging in `src/app/api/auth/signup/route.ts`:
+Add logging in your API route:
 
 ```typescript
 // After rate limit check
@@ -398,6 +413,7 @@ console.log({
 ```
 
 Use tools like:
+
 - **Vercel Analytics**
 - **Sentry** (error tracking)
 - **LogRocket** (session replay)
@@ -411,6 +427,7 @@ Use tools like:
 **Cause**: Environment variables not loaded
 
 **Solution**:
+
 ```bash
 # Make sure .env.local exists
 cp .env.example .env.local
@@ -427,6 +444,7 @@ npm run dev
 **Cause**: Redis connection failed
 
 **Solution**:
+
 ```typescript
 // Test Redis connection
 import { testRedisConnection } from "@/lib/upstash";
@@ -440,11 +458,12 @@ console.log("Redis connected:", isConnected);
 **Cause**: Redis keys not expiring or clock skew
 
 **Solution**:
+
 ```bash
 # Clear all rate limit keys in Upstash Console
 # Data Browser → Delete keys matching "ratelimit:*"
 
-# Or reset programmatically
+# Or reset programmatically (if such helper exists)
 import { resetRateLimit } from "@/lib/rate-limit";
 await resetRateLimit("ip", "your-ip");
 ```
@@ -453,8 +472,8 @@ await resetRateLimit("ip", "your-ip");
 
 **Cause**: Local IP (127.0.0.1) used for all requests
 
-**Solution**:
-Use different emails to test email-based limits, or add:
+**Solution**: Use different emails to test email-based limits, or add:
+
 ```typescript
 // In route.ts, for testing only
 const clientIp = request.headers.get("x-test-ip") || getClientIp(request);
@@ -468,9 +487,10 @@ curl -H "x-test-ip: 1.2.3.4" ...
 **Cause**: Database trigger not firing
 
 **Solution**:
+
 ```sql
 -- Check trigger exists
-SELECT * FROM information_schema.triggers 
+SELECT * FROM information_schema.triggers
 WHERE trigger_name = 'on_auth_user_created';
 
 -- Check function exists
@@ -486,6 +506,7 @@ VALUES ('user-uuid', 'user@example.com');
 ## Security Best Practices
 
 ### 1. Don't Expose Internal Details
+
 ```typescript
 // BAD
 throw new Error(`Rate limited: ${internalDetails}`);
@@ -495,6 +516,7 @@ throw new Error("Too many attempts. Please try again later.");
 ```
 
 ### 2. Log Rate Limit Events
+
 ```typescript
 if (!rateLimitResult.allowed) {
   console.warn("Rate limit triggered", {
@@ -506,12 +528,12 @@ if (!rateLimitResult.allowed) {
 ```
 
 ### 3. Use HTTPS in Production
-```bash
-# Upstash URLs are always HTTPS
-# Ensure your app is also HTTPS (Vercel does this automatically)
-```
+
+- Upstash URLs are always HTTPS
+- Ensure your app is also HTTPS (Vercel does this automatically)
 
 ### 4. Fail Open on Redis Errors
+
 ```typescript
 // If Redis is down, allow request (availability > strict limiting)
 catch (error) {
@@ -521,7 +543,9 @@ catch (error) {
 ```
 
 ### 5. Rate Limit Other Endpoints
-Apply same pattern to:
+
+Apply the same pattern to:
+
 - Login (`/api/auth/login`)
 - Password reset (`/api/auth/forgot-password`)
 - Email verification resend
@@ -563,4 +587,4 @@ If you encounter issues:
 
 ---
 
-**Last Updated**: 2026-01-06
+**Last Updated**: 2026-03-18

@@ -154,15 +154,15 @@ WHERE trigger_name = 'on_auth_user_created';
 ## What's Next?
 
 ### For Development:
-- Read `RATE_LIMITING_SETUP.md` for detailed documentation
-- Check `IMPLEMENTATION_SUMMARY.md` for code explanations
+- Read [docs/rate-limiting/setup.md](docs/rate-limiting/setup.md) for detailed documentation
+- Check [docs/implementation-summary.md](docs/implementation-summary.md) for code explanations
 - Customize rate limits in `src/lib/rate-limit.ts`
 
 ### For Production:
 1. Add environment variables to hosting platform (Vercel, etc.)
 2. Choose Upstash Global database for better latency
 3. Set up monitoring (Sentry, LogRocket)
-4. Review security checklist in `RATE_LIMITING_SETUP.md`
+4. Review security checklist in [docs/rate-limiting/setup.md](docs/rate-limiting/setup.md)
 
 ---
 
@@ -182,8 +182,8 @@ To adjust, edit `src/lib/rate-limit.ts`
 
 ## Need Help?
 
-- **Setup Issues**: Check `RATE_LIMITING_SETUP.md` → Troubleshooting
-- **Code Questions**: Read `IMPLEMENTATION_SUMMARY.md` → Code Explanations
+- **Setup Issues**: Check [docs/rate-limiting/setup.md](docs/rate-limiting/setup.md) → Troubleshooting
+- **Code Questions**: Read [docs/implementation-summary.md](docs/implementation-summary.md) → Code Explanations
 - **Upstash Help**: https://docs.upstash.com/
 - **Supabase Help**: https://supabase.com/docs
 
